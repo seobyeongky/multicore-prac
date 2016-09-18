@@ -17,10 +17,9 @@ Context g_context;
 
 class Worker {
 public:
-    // TODO: possible optimizing
-    Worker(const vector<int> & houses, int num_allowed_threads)
+    Worker(int house, int num_allowed_threads)
         : thread_()
-        , houses_(houses)
+        , house_(house)
         , result_()
         , num_allowed_threads_(num_allowed_threads) {
     }
@@ -29,24 +28,23 @@ public:
         pthread_create(&thread_, 0, BFSThreadStatic, this);
     }
 
-    void Join() {
-        pthread_join(thread_, (void **)&result_);
+    void JoinAndUpdateResult(BFSResult & result_to_update) {
+        pthread_join(thread_, (void **)nullptr);
+        result_to_update.Update(result_);
     }
 
 
 private:
     pthread_t thread_;
-    vector<int> houses_;
+    int house_;
     BFSResult result_;
     int num_allowed_threads_;
 
     void *BFSThread() {
-        for (int house : houses_) {
-            if (num_allowed_threads_ == 1) {
-                result_.Update(BFSSingleThread(house));
-            } else {
-                result_.Update(BFSMultiThread(house, num_allowed_threads_));
-            }
+        if (num_allowed_threads_ == 1) {
+            result_.Update(BFSSingleThread(house_));
+        } else {
+            result_.Update(BFSMultiThread(house_, num_allowed_threads_));
         }
 
         return &result_;
@@ -75,7 +73,21 @@ int main() {
     
     size_t num_cores = sysconf(_SC_NPROCESSORS_ONLN);
 
-    vector<Worker*> workers(min(num_cores, g_context.houses.size()), nullptr);
+    vector<Worker*> workers;
+    for (unsigned int i = 0; i < g_context.houses.size(); i++) {
+        workers.push_back(new Worker(g_context.houses[i], 1));
+    }
+    
+    for (Worker * worker : workers) {
+        worker->Work();
+    }
+    
+    BFSResult result;
+    for (Worker * worker : workers) {
+        worker->JoinAndUpdateResult(result);
+    }
+
+    printf("%d\n%d\n", result.min_dist, result.max_dist);
 
     return 0;
 }

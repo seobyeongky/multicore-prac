@@ -1,5 +1,5 @@
-#ifndef __PROJ1_READER_H__
-#define __PROJ1_READER_H__
+#ifndef __PROJECT1_SRC_READER_H__
+#define __PROJECT1_SRC_READER_H__
 
 #include "context.h"
 
@@ -14,4 +14,4 @@ private:
     void ReadNumbersInLine(std::vector<int> * num_list);
 };
 
-#endif // __PROJ1_READER_H__
+#endif // __PROJECT1_SRC_READER_H__

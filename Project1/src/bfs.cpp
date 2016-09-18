@@ -1,3 +1,5 @@
+#define DBG_PRINT
+
 #include "bfs.h"
 #include "context.h"
 
@@ -37,7 +39,7 @@ BFSResult BFSSingleThread(int start_house) {
 
     next_vertices->push_back(start_house);
     check_map[start_house] = true;
-    
+
     for (int dist = 0;
             num_houses_to_visit_left > 0 && next_vertices->size() > 0;
             dist++) {
@@ -49,13 +51,17 @@ BFSResult BFSSingleThread(int start_house) {
                     check_map[neighbor] = true;
                     if (g_context.house_bitmap[neighbor]) {
                         num_houses_to_visit_left--;
-                        result.Update(dist);
+                        result.Update(dist + 1);
                     }
                 }
             }
         }
         cur_vertices->clear();
     }
+
+#ifdef DBG_PRINT
+    printf("house %d result %d %d\n", start_house, result.min_dist, result.max_dist);
+#endif
 
     return result;
 }

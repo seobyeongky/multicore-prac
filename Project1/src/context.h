@@ -1,5 +1,5 @@
-#ifndef __PROJ1_CONTEXT_H__
-#define __PROJ1_CONTEXT_H__
+#ifndef __PROJECT1_SRC_CONTEXT_H__
+#define __PROJECT1_SRC_CONTEXT_H__
 
 #include <vector>
 
@@ -13,4 +13,4 @@ struct Context
     AdjList adjlist;
 };
 
-#endif // __PROJ1_CONTEXT_H__
+#endif // __PROJECT1_SRC_CONTEXT_H__
