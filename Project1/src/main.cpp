@@ -1,6 +1,3 @@
-#define PRINT_GRAPH
-
-
 #include "context.h"
 #include "reader.h"
 #include "bfs.h"
@@ -59,7 +56,7 @@ private:
 int main() {
     Reader().Read(&g_context);
     
-#ifdef PRINT_GRAPH
+#ifdef DBG_PRINT
     printf("total %d vertices.\n", g_context.num_vertices);
 
     for (int i = 1; i <= g_context.num_vertices; i++) {
@@ -69,7 +66,7 @@ int main() {
         }
         printf("\n");
     }
-#endif // PRINT_GRAPH
+#endif
     
     size_t num_cores = sysconf(_SC_NPROCESSORS_ONLN);
 

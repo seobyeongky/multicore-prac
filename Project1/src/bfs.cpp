@@ -1,5 +1,3 @@
-#define DBG_PRINT
-
 #include "bfs.h"
 #include "context.h"
 
