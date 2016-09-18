@@ -4,6 +4,7 @@
 #include <vector>
 #include <array>
 #include <iterator>
+#include <assert.h>
 
 template<std::size_t N>
 struct EdgeInfo {
@@ -17,6 +18,7 @@ struct EdgeInfo {
 
     void PushBack(int neighbor) {
         neighbors[size++] = neighbor;
+        assert(size <= 3);
     }
 };
 
