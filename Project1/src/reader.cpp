@@ -29,8 +29,8 @@ void Reader::Read(Context * context) {
         for (int j = 0; j < num_neighbors; j++) {
             int v_ij;
             scanf("%d ", &v_ij);
-            context->adjlist[v_i].PushBack(v_ij);
-            context->adjlist[v_ij].PushBack(v_i);
+            context->adjlist[v_i].push_back(v_ij);
+            context->adjlist[v_ij].push_back(v_i);
         }
     }
 }

@@ -7,23 +7,12 @@
 #include <assert.h>
 
 template<std::size_t N>
-struct EdgeInfo {
-    int size;
-    std::array<int, N> neighbors;
-
-    EdgeInfo()
-        : size(0)
-        , neighbors({-1, }) {
-    }
-
-    void PushBack(int neighbor) {
-        neighbors[size++] = neighbor;
-        assert(size <= 3);
-    }
+struct DistInfo {
+    std::array<int, N> map;
 };
 
-typedef std::vector<EdgeInfo<3>> AdjList;
-typedef std::vector<std::array<int, 64>> DistMap;
+typedef std::vector<std::vector<int>> AdjList;
+typedef std::vector<DistInfo<64>> DistMap;
 
 struct Context
 {

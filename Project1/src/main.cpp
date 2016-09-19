@@ -67,7 +67,12 @@ int main() {
         printf("\n");
     }
 #endif
-    
+ 
+    g_context.dist_map.resize(g_context.num_vertices + 1);
+    for (int i = 1; i <= g_context.num_vertices; ++i) {
+        g_context.dist_map[i].map.fill(-1);
+    }
+
     size_t num_cores = sysconf(_SC_NPROCESSORS_ONLN);
 
     vector<Worker*> workers;
