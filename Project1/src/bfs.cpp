@@ -29,7 +29,7 @@ void BFSResult::Update(int dist) {
 
 BFSResult BFSSingleThread(int start_house) {
     BFSResult result;
-    vector<bool> check_map(g_context.num_vertices + 1, false);
+    vector<char> check_map(g_context.num_vertices + 1, 0);
     vector<int> buf1, buf2;
     vector<int> *cur_vertices = &buf1;
     vector<int> *next_vertices = &buf2;
@@ -47,7 +47,7 @@ BFSResult BFSSingleThread(int start_house) {
             for (int neighbor : g_context.adjlist[v]) {
                 if (!check_map[neighbor]) {
                     next_vertices->push_back(neighbor);
-                    check_map[neighbor] = true;
+                    check_map[neighbor] = 1;
                     if (g_context.house_bitmap[neighbor]) {
                         num_houses_to_visit_left--;
                         result.Update(dist + 1);

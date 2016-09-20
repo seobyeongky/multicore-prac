@@ -1,6 +1,6 @@
 # Compiler and Compile options.
 CC = g++
-CXXFLAGS = -g -Wall -std=c++11
+CXXFLAGS = -g -Wall -std=c++11 -O3
 
 # Macros specifying path for compile.
 SRCS := src/main.cpp src/reader.cpp src/bfs.cpp
@@ -12,7 +12,7 @@ LIB = ./lib/ -lpthread
 CPPFLAGS += -I$(INC)
 
 # Compile command.
-TARGET = bin/Project1
+TARGET = bin/project1
 $(TARGET): $(OBJS)
 	$(CC) $(CXXFLAGS) $(CPPFLAGS) -o $(TARGET) $(OBJS) -L$(LIB)
 
