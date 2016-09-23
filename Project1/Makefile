@@ -3,7 +3,7 @@ CC = g++
 CXXFLAGS = -g -Wall -std=c++11 -O3
 
 # Macros specifying path for compile.
-SRCS := src/main.cpp src/reader.cpp src/bfs.cpp
+SRCS := $(wildcard src/*.cpp)
 OBJS := $(SRCS:.cpp=.o)
 INC = ./include/
 LIB = ./lib/ -lpthread
