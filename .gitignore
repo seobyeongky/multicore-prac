@@ -1,4 +1,8 @@
 bin/
 *.o
+*.data
+*.data.old
+prac_pthread
+prac_mutex
 
 
