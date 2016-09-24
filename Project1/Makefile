@@ -1,6 +1,6 @@
 # Compiler and Compile options.
 CC = g++
-CXXFLAGS = -g -Wall -std=c++11 -O3
+CXXFLAGS = -g -Wall -std=c++11 -O1
 
 # Macros specifying path for compile.
 SRCS := $(wildcard src/*.cpp)
@@ -14,6 +14,7 @@ CPPFLAGS += -I$(INC)
 # Compile command.
 TARGET = bin/project1
 $(TARGET): $(OBJS)
+	mkdir -p bin
 	$(CC) $(CXXFLAGS) $(CPPFLAGS) -o $(TARGET) $(OBJS) -L$(LIB)
 
 # Delete binary & object files.
