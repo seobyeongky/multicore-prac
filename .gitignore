@@ -5,4 +5,4 @@ bin/
 prac_pthread
 prac_mutex
 
-
+input*.txt
