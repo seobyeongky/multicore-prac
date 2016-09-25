@@ -12,19 +12,24 @@
 template <typename T, size_t N>
 struct AdjInfo {
     std::array<T, N + 1> neighbors;
+    int size;
 
     AdjInfo()
-        : neighbors() {
-        neighbors[0] = END_OF_ARR;
+        : neighbors({END_OF_ARR})
+        , size(0) {
     }
 
     void PushBack(int vertex) {
+        neighbors[size++] = vertex;
+        neighbors[size] = END_OF_ARR;
+        /*
         int * ptr = &neighbors[0];
         while ((*ptr) != -1) {
             ++ptr;
         }
         *ptr = vertex;
         *(++ptr) = -1;
+        */
     }
 };
 
@@ -34,7 +39,7 @@ struct Context
 {
     int num_vertices;
     std::vector<int> houses;
-    std::vector<bool> house_bitmap;
+    std::vector<char> house_bitmap;
     AdjList adjlist;
 };
 

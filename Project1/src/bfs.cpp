@@ -33,20 +33,18 @@ BFSResult BFSSingleThread(int start_house) {
     vector<int> buf1, buf2;
     vector<int> *cur_vertices = &buf1;
     vector<int> *next_vertices = &buf2;
-    vector<bool> house_check_map;
     int num_houses_to_visit_left = g_context.houses.size() - 1;
 
     next_vertices->push_back(start_house);
-    check_map[start_house] = true;
+    check_map[start_house] = 1;
 
     for (int dist = 0;
             num_houses_to_visit_left > 0 && next_vertices->size() > 0;
             dist++) {
         swap(cur_vertices, next_vertices);
         for (int v : *cur_vertices) {
-            auto & adj_info = g_context.adjlist[v];
             int neighbor;
-            for (int * ptr = &adj_info.neighbors[0];
+            for (int * ptr = &g_context.adjlist[v].neighbors[0];
                     (neighbor = *ptr) != END_OF_ARR;
                     ++ptr) {
                 if (!check_map[neighbor]) {

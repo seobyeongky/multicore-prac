@@ -16,9 +16,9 @@ void Reader::Read(Context * context) {
     int num_line_below;
     scanf("%d %d\n", &context->num_vertices, &num_line_below);
 
-    context->house_bitmap.resize(context->num_vertices + 1, false);
+    context->house_bitmap.resize(context->num_vertices + 1, 0);
     for (int house : context->houses) {
-        context->house_bitmap[house] = true;
+        context->house_bitmap[house] = 1;
     }
     
     context->adjlist.resize(context->num_vertices + 1);
