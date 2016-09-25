@@ -44,7 +44,11 @@ BFSResult BFSSingleThread(int start_house) {
             dist++) {
         swap(cur_vertices, next_vertices);
         for (int v : *cur_vertices) {
-            for (int neighbor : g_context.adjlist[v]) {
+            auto & adj_info = g_context.adjlist[v];
+            int neighbor;
+            for (int * ptr = &adj_info.neighbors[0];
+                    (neighbor = *ptr) != END_OF_ARR;
+                    ++ptr) {
                 if (!check_map[neighbor]) {
                     next_vertices->push_back(neighbor);
                     check_map[neighbor] = 1;
