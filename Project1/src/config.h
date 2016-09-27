@@ -4,5 +4,6 @@
 //#define DBG_PRINT
 
 #define MAX_EDGES_PER_VERTEX 10
+#define MAX_HOUSE 64
 
 #endif // __PROJECT1_SRC_CONFIG_H__

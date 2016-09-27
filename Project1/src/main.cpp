@@ -1,6 +1,7 @@
 #include "context.h"
 #include "reader.h"
 #include "bfs.h"
+#include "util.h"
 
 #include <stdio.h>
 #include <unistd.h>
@@ -66,6 +67,9 @@ private:
 
 
 int main() {
+    InitUtil();
+    g_context.visit_bitmap_mutex = PTHREAD_MUTEX_INITIALIZER;
+
     Reader().Read(&g_context);
     
 #ifdef DBG_PRINT

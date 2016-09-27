@@ -17,16 +17,18 @@ void Reader::Read(Context * context) {
     scanf("%d %d\n", &context->num_vertices, &num_line_below);
 
     context->house_bitmap.resize(context->num_vertices + 1, 0);
-    for (int house : context->houses) {
+    for (int i = 0; i < context->houses.size(); i++) {
+        int house = context->houses[i];
         context->house_bitmap[house] = 1;
+        context->house_index_map[house] = i;
     }
     
     context->adjlist.resize(context->num_vertices + 1);
-    for (int i = 1; i <= num_line_below; i++) {
+    for (int i = 1; i <= num_line_below; ++i) {
         int v_i, num_neighbors;
         scanf("%d %d ", &v_i, &num_neighbors);
         
-        for (int j = 0; j < num_neighbors; j++) {
+        for (int j = 0; j < num_neighbors; ++j) {
             int v_ij;
             scanf("%d ", &v_ij);
             context->adjlist[v_i].PushBack(v_ij);

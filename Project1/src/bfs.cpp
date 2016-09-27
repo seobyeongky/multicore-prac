@@ -1,5 +1,6 @@
 #include "bfs.h"
 #include "context.h"
+#include "util.h"
 
 #include <pthread.h>
 #include <limits.h>
@@ -33,13 +34,23 @@ BFSResult BFSSingleThread(int start_house) {
     vector<int> buf1, buf2;
     vector<int> *cur_vertices = &buf1;
     vector<int> *next_vertices = &buf2;
-    int num_houses_to_visit_left = g_context.houses.size() - 1;
+    int start_house_index = g_context.house_index_map[start_house];
+    _64Bit & visit_bits = g_context.visit_bitmap[start_house_index];
+    _64Bit full_visit_bits = 0;
+
+    for (int i = 0; i < (int)g_context.houses.size(); i++) {
+        if (i == start_house_index) {
+            continue;
+        }
+        full_visit_bits |= g_pow2[i];
+    }
 
     next_vertices->push_back(start_house);
     check_map[start_house] = 1;
 
-    for (int dist = 0;
-            num_houses_to_visit_left > 0 && next_vertices->size() > 0;
+    int dist;
+    for (dist = 0;
+            visit_bits != full_visit_bits && next_vertices->size() > 0;
             dist++) {
         swap(cur_vertices, next_vertices);
         for (int v : *cur_vertices) {
@@ -51,17 +62,21 @@ BFSResult BFSSingleThread(int start_house) {
                     next_vertices->push_back(neighbor);
                     check_map[neighbor] = 1;
                     if (g_context.house_bitmap[neighbor]) {
-                        num_houses_to_visit_left--;
                         result.Update(dist + 1);
+                        int house_index = g_context.house_index_map[neighbor];
+                        pthread_mutex_lock(&g_context.visit_bitmap_mutex);
+                        visit_bits |= g_pow2[house_index];
+                        g_context.visit_bitmap[house_index] |= g_pow2[start_house_index];
+                        pthread_mutex_unlock(&g_context.visit_bitmap_mutex);
                     }
                 }
             }
         }
         cur_vertices->clear();
     }
-
 #ifdef DBG_PRINT
     printf("house %d result %d %d\n", start_house, result.min_dist, result.max_dist);
+    printf("  dist : %d\n", dist);
 #endif
 
     return result;
