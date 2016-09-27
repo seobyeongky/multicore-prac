@@ -28,6 +28,20 @@ void BFSResult::Update(int dist) {
     max_dist = max(max_dist, dist);
 }
 
+#define CHECK_NEIGHBOR(neighbor) if (!check_map[neighbor]) { \
+    next_vertices->push_back(neighbor); \
+    check_map[neighbor] = 1; \
+        if (g_context.house_bitmap[neighbor]) { \
+            result.Update(dist + 1); \
+            int house_index = g_context.house_index_map[neighbor]; \
+            pthread_mutex_lock(&g_context.visit_bitmap_mutex); \
+            visit_bits |= g_pow2[house_index]; \
+            g_context.visit_bitmap[house_index] |= g_pow2[start_house_index]; \
+            pthread_mutex_unlock(&g_context.visit_bitmap_mutex); \
+        } \
+    }
+
+
 BFSResult BFSSingleThread(int start_house) {
     BFSResult result;
     vector<char> check_map(g_context.num_vertices + 1, 0);
@@ -54,23 +68,37 @@ BFSResult BFSSingleThread(int start_house) {
             dist++) {
         swap(cur_vertices, next_vertices);
         for (int v : *cur_vertices) {
-            int neighbor;
-            for (int * ptr = &g_context.adjlist[v].neighbors[0];
-                    (neighbor = *ptr) != END_OF_ARR;
-                    ++ptr) {
-                if (!check_map[neighbor]) {
-                    next_vertices->push_back(neighbor);
-                    check_map[neighbor] = 1;
-                    if (g_context.house_bitmap[neighbor]) {
-                        result.Update(dist + 1);
-                        int house_index = g_context.house_index_map[neighbor];
-                        pthread_mutex_lock(&g_context.visit_bitmap_mutex);
-                        visit_bits |= g_pow2[house_index];
-                        g_context.visit_bitmap[house_index] |= g_pow2[start_house_index];
-                        pthread_mutex_unlock(&g_context.visit_bitmap_mutex);
-                    }
-                }
+            //for (int * ptr = &g_context.adjlist[v].neighbors[0];
+            //        (neighbor = *ptr) != END_OF_ARR;
+            //        ++ptr) {
+            auto & adj_info = g_context.adjlist[v];
+            switch (adj_info.size) {
+                case 10:
+                    CHECK_NEIGHBOR(adj_info.neighbors[9]);
+                case 9:
+                    CHECK_NEIGHBOR(adj_info.neighbors[8]);
+                case 8:
+                    CHECK_NEIGHBOR(adj_info.neighbors[7]);
+                case 7:
+                    CHECK_NEIGHBOR(adj_info.neighbors[6]);
+                case 6:
+                    CHECK_NEIGHBOR(adj_info.neighbors[5]);
+                case 5:
+                    CHECK_NEIGHBOR(adj_info.neighbors[4]);
+                case 4:
+                    CHECK_NEIGHBOR(adj_info.neighbors[3]);
+                case 3:
+                    CHECK_NEIGHBOR(adj_info.neighbors[2]);
+                case 2:
+                    CHECK_NEIGHBOR(adj_info.neighbors[1]);
+                case 1:
+                    CHECK_NEIGHBOR(adj_info.neighbors[0]);
+                case 0:
+                    break;
+                default:
+                    assert(false && "Unhandled adj_info size");
             }
+            //}
         }
         cur_vertices->clear();
     }
