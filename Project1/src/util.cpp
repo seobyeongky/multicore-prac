@@ -1,3 +1,10 @@
+/*
+ * Utilities
+ *
+ * @author Byeongky Seo
+ * @since 2016-08-16
+ */
+
 #include "util.h"
 #include "config.h"
 

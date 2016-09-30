@@ -1,3 +1,10 @@
+/*
+ * BFS library source
+ *
+ * @author Byeongky Seo
+ * @since 2016-08-16
+ */
+
 #include "bfs.h"
 #include "context.h"
 #include "util.h"
@@ -70,10 +77,8 @@ BFSResult BFSSingleThread(int start_house) {
             dist++) {
         swap(cur_vertices, next_vertices);
         for (int v : *cur_vertices) {
-            //for (int * ptr = &g_context.adjlist[v].neighbors[0];
-            //        (neighbor = *ptr) != END_OF_ARR;
-            //        ++ptr) {
             auto & adj_info = g_context.adjlist[v];
+            // Loop unrolling
             switch (adj_info.size) {
                 case 10:
                     VisitVertexM(adj_info.neighbors[9]);

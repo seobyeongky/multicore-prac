@@ -1,3 +1,10 @@
+/*
+ * fds
+ *
+ * @author Byeongky Seo
+ * @since 2016-08-16
+ */
+
 #ifndef __PROJECT1_SRC_READER_H__
 #define __PROJECT1_SRC_READER_H__
 

@@ -1,3 +1,10 @@
+/*
+ * Input file reading logic
+ *
+ * @author Byeongky Seo
+ * @since 2016-08-16
+ */
+
 #include "reader.h"
 
 #include <stdio.h>

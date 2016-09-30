@@ -1,3 +1,11 @@
+/*
+ * BFS library header
+ *
+ * @author Byeongky Seo
+ * @since 2016-08-16
+ */
+
+
 #ifndef __PROJECT1_SRC__BFS_H__
 #define __PROJECT1_SRC__BFS_H__
 

@@ -1,3 +1,10 @@
+/**
+ * Main entry source
+ *
+ * @author Byeongky Seo
+ * @since 2016-09-16
+ */
+
 #include "context.h"
 #include "reader.h"
 #include "bfs.h"
@@ -16,9 +23,11 @@ Context g_context;
 int g_house_index;
 pthread_mutex_t g_house_index_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-class Worker {
+// HouseWorker competitively takes a house.
+// And find the min/max shortest distance from the house.
+class HouseWorker {
 public:
-    Worker(int num_allowed_threads)
+    HouseWorker(int num_allowed_threads)
         : thread_()
         , result_()
         , num_allowed_threads_(num_allowed_threads) {
@@ -32,7 +41,6 @@ public:
         pthread_join(thread_, (void **)nullptr);
         result_to_update.Update(result_);
     }
-
 
 private:
     pthread_t thread_;
@@ -51,7 +59,9 @@ private:
             }
 
             int house = g_context.houses[house_index];
-            //printf("Begin work : %d\n", house);
+
+            // The number of allowed threads is a main factor of
+            // choice of the search algorithm.
             if (num_allowed_threads_ == 1) {
                 result_.Update(BFSSingleThread(house));
             } else {
@@ -63,7 +73,7 @@ private:
     }
 
     static void *BFSThreadStatic(void *self) {
-        return ((Worker *)self)->BFSThread();
+        return ((HouseWorker *)self)->BFSThread();
     }
 };
 
@@ -91,8 +101,12 @@ int main() {
 
     vector<int> num_threads_per_worker_arr;
     if (num_cores <= (int)g_context.houses.size()) {
+        // make num_cores * HouseWorkers...
+        // ex) cores(4) houses(15) => HouseWorkers(1 1 1 1)
         num_threads_per_worker_arr.resize(num_cores, 1);
     } else {
+        // assign appropriate cores to each of the HouseWorkers.
+        // ex) cores(36) houses(10) => HouseWorkers(3 3 3 3 4 4 4 4 4 4)
         num_threads_per_worker_arr.resize(g_context.houses.size(), max_threads_per_worker);
         int num_threads = max_threads_per_worker * g_context.houses.size();
         for (int i = 0; num_threads > num_cores; i++) {
@@ -101,18 +115,17 @@ int main() {
         }
     }
 
-    vector<Worker*> workers;
+    vector<HouseWorker*> workers;
     for (int num_threads_per_worker : num_threads_per_worker_arr) {
-        //printf("worker : %d\n", num_threads_per_worker);
-        workers.push_back(new Worker(num_threads_per_worker));
+        workers.push_back(new HouseWorker(num_threads_per_worker));
     }
     
-    for (Worker * worker : workers) {
+    for (HouseWorker * worker : workers) {
         worker->Work();
     }
     
     BFSResult result;
-    for (Worker * worker : workers) {
+    for (HouseWorker * worker : workers) {
         worker->JoinAndUpdateResult(result);
     }
 

@@ -1,3 +1,11 @@
+/*
+ * Definition of main problem solving global context
+ *
+ * @author Byeongky Seo
+ * @since 2016-09-16
+ */
+
+
 #ifndef __PROJECT1_SRC_CONTEXT_H__
 #define __PROJECT1_SRC_CONTEXT_H__
 
@@ -37,14 +45,27 @@ struct AdjInfo {
 
 typedef std::vector<AdjInfo<int, MAX_EDGES_PER_VERTEX>> AdjList;
 
+// This is a main problom solving global context
 struct Context
 {
     int num_vertices;
+
     std::vector<int> houses;
-    std::vector<char> house_bitmap;
-    std::map<int, int> house_index_map;
+    
+    // house_bitmap[v] = whether v is a house or not(just crossroad).
+    std::vector<char> house_bitmap; 
+
+    // house_index_map[v] = index of house(v) = (0, 1, 2, ... houses.size() - 1)
+    std::map<int, int> house_index_map; 
+
+    // Adjacency List
     AdjList adjlist;
+
+    // when visit_bitmap[i] = y than, y & (1 << j) is
+    //   visit check bit between house(index i) and house(index j)
     std::array<_64Bit, MAX_HOUSE> visit_bitmap;
+
+    // mutex of visit_bitmap
     pthread_mutex_t visit_bitmap_mutex;
 };
 

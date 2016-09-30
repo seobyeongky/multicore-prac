@@ -1,3 +1,10 @@
+/*
+ * Utilities
+ *
+ * @author Byeongky Seo
+ * @since 2016-08-16
+ */
+
 #ifndef __PROJECT1_SRC_UTIL_H__
 #define __PROJECT1_SRC_UTIL_H__
 
