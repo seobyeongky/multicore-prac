@@ -5,6 +5,7 @@
 
 bool g_flag[2];
 int g_victim;
+int g_sum = 0;
 
 void InitLock() {
     g_flag[0] = false;
@@ -14,7 +15,9 @@ void InitLock() {
 
 void Lock(int thread_id) {
     g_flag[thread_id] = true;
+    __sync_synchronize();
     g_victim = thread_id;
+    //__sync_synchronize();
     while (g_flag[1-thread_id] && g_victim == thread_id) {
         //empty
     }
@@ -30,7 +33,10 @@ void *FeedMyPet(void* arg) {
     int pet_size = 0;
     for (i = 0; i < NUM_SNACK; i++) {
         Lock(id);
+        //__sync_synchronize();
         pet_size++;
+        g_sum++;
+        //__sync_synchronize();
         Unlock(id);
     }
 
@@ -52,5 +58,5 @@ int main() {
     pthread_join(alice, NULL);
     pthread_join(bob, NULL);
 
-    printf("Finished!\n");
+    printf("Finished! %d\n", g_sum);
 }

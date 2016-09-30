@@ -1,5 +1,5 @@
 CC = g++
-CXXFLAGS = -g -Wall -std=c++11
+CXXFLAGS = -g #-Wall -std=c++11
 
 SRCS := lock.cpp
 OBJS := $(SRCS:.cpp=.o)
