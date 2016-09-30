@@ -53,8 +53,13 @@ void BFSResult::Update(int dist) {
 
 BFSResult BFSSingleThread(int start_house) {
     BFSResult result;
-    vector<char> check_map(g_context.num_vertices + 1, 0);
-    vector<int> buf1, buf2;
+    vector<char> & check_map = AllocCharVector();
+    check_map.clear();
+    check_map.resize(g_context.num_vertices + 1, 0);
+    vector<int> & buf1 = AllocIntVector();
+    buf1.clear();
+    vector<int> & buf2 = AllocIntVector();
+    buf2.clear();
     vector<int> *cur_vertices = &buf1;
     vector<int> *next_vertices = &buf2;
     int start_house_index = g_context.house_index_map[start_house];
@@ -112,6 +117,10 @@ BFSResult BFSSingleThread(int start_house) {
     printf("  dist : %d\n", dist);
 #endif
 
+    FreeIntVector(buf2);
+    FreeIntVector(buf1);
+    FreeCharVector(check_map);
+
     return result;
 }
 
@@ -121,7 +130,7 @@ public:
     BFSMultiThreadContext(int start_house, int num_threads)
         : start_house_(start_house)
         , start_house_index_(g_context.house_index_map[start_house_])
-        , check_map_(g_context.num_vertices + 1, 0)
+        , check_map_(AllocCharVector())
         , visit_bits_(g_context.visit_bitmap[start_house_index_])
         , full_visit_bits_(0)
         , result_()
@@ -133,12 +142,18 @@ public:
         , done_bits_flag_buf_({0, 0})
         , num_free_workers_(0)
         , workers_(num_threads) {
+            check_map_.clear();
+            check_map_.resize(g_context.num_vertices + 1, 0);
             for (int i = 0; i < (int)g_context.houses.size(); i++) {
             if (i == start_house_index_) {
                 continue;
             }
             full_visit_bits_ |= g_pow2[i];
         }
+    }
+
+    ~BFSMultiThreadContext() {
+        FreeCharVector(check_map_);
     }
 
     BFSResult Run() {
@@ -191,7 +206,7 @@ private:
     int start_house_;
     int start_house_index_;
     int num_free_threads_;
-    vector<char> check_map_;
+    vector<char> & check_map_;
     _64Bit & visit_bits_;
     _64Bit full_visit_bits_;
     BFSResult result_;
@@ -211,7 +226,10 @@ private:
     }
     
     void BeginWorkAt(WorkParam * param) {
-        vector<int> buf1, buf2;
+        vector<int> & buf1 = AllocIntVector();
+        buf1.clear();
+        vector<int> & buf2 = AllocIntVector();
+        buf2.clear();
         vector<int> *cur_vertices = &buf1;
         vector<int> *next_vertices = &buf2;
         int worker_id = param->worker_id;
@@ -334,6 +352,9 @@ private:
                 pthread_join(child_worker.second, (void **)nullptr);
             }*/
         }
+
+        FreeIntVector(buf2);
+        FreeIntVector(buf1);
     }
 
     inline void VisitVertex(int v, int dist, vector<int> * next_vertices) {
