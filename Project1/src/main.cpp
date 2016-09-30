@@ -8,6 +8,7 @@
 #include <vector>
 #include <pthread.h>
 #include <algorithm>
+#include <math.h>
 
 using namespace std;
 
@@ -50,6 +51,7 @@ private:
             }
 
             int house = g_context.houses[house_index];
+            //printf("Begin work : %d\n", house);
             if (num_allowed_threads_ == 1) {
                 result_.Update(BFSSingleThread(house));
             } else {
@@ -84,11 +86,25 @@ int main() {
     }
 #endif
  
-    size_t num_cores = sysconf(_SC_NPROCESSORS_ONLN);
+    int num_cores = sysconf(_SC_NPROCESSORS_ONLN);
+    int max_threads_per_worker = ceil((float)num_cores / g_context.houses.size());
+
+    vector<int> num_threads_per_worker_arr;
+    if (num_cores <= (int)g_context.houses.size()) {
+        num_threads_per_worker_arr.resize(num_cores, 1);
+    } else {
+        num_threads_per_worker_arr.resize(g_context.houses.size(), max_threads_per_worker);
+        int num_threads = max_threads_per_worker * g_context.houses.size();
+        for (int i = 0; num_threads > num_cores; i++) {
+            num_threads--;
+            num_threads_per_worker_arr[i]--;
+        }
+    }
 
     vector<Worker*> workers;
-    for (unsigned int i = 0; i < num_cores; i++) {
-        workers.push_back(new Worker(1));
+    for (int num_threads_per_worker : num_threads_per_worker_arr) {
+        //printf("worker : %d\n", num_threads_per_worker);
+        workers.push_back(new Worker(num_threads_per_worker));
     }
     
     for (Worker * worker : workers) {

@@ -11,20 +11,19 @@
 #include <pthread.h>
 #include <map>
 
-#define END_OF_ARR -1
 template <typename T, size_t N>
 struct AdjInfo {
-    std::array<T, N + 1> neighbors;
+    std::array<T, N> neighbors;
     int size;
 
     AdjInfo()
-        : neighbors({END_OF_ARR})
+        : neighbors()
         , size(0) {
     }
 
     void PushBack(int vertex) {
         neighbors[size++] = vertex;
-        neighbors[size] = END_OF_ARR;
+        // neighbors[size] = END_OF_ARR;
         /*
         int * ptr = &neighbors[0];
         while ((*ptr) != -1) {
