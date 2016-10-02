@@ -78,6 +78,9 @@ private:
 };
 
 
+/**
+ *  Main entry function
+ */
 int main() {
     InitUtil();
     g_context.visit_bitmap_mutex = PTHREAD_MUTEX_INITIALIZER;

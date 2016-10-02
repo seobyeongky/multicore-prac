@@ -19,6 +19,7 @@
 #include <pthread.h>
 #include <map>
 
+// Adjacency information of a vertex
 template <typename T, size_t N>
 struct AdjInfo {
     std::array<T, N> neighbors;

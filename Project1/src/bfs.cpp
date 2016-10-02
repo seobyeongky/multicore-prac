@@ -37,7 +37,10 @@ void BFSResult::Update(int dist) {
     max_dist = max(max_dist, dist);
 }
 
-#define VisitVertexM(neighbor) if (!check_map[neighbor]) { \
+/**
+ *  Macro function that visit the given vertex
+ */
+#define VISIT_VERTEX(neighbor) if (!check_map[neighbor]) { \
     next_vertices->push_back(neighbor); \
     check_map[neighbor] = 1; \
         if (g_context.house_bitmap[neighbor]) { \
@@ -86,25 +89,25 @@ BFSResult BFSSingleThread(int start_house) {
             // Loop unrolling
             switch (adj_info.size) {
                 case 10:
-                    VisitVertexM(adj_info.neighbors[9]);
+                    VISIT_VERTEX(adj_info.neighbors[9]);
                 case 9:
-                    VisitVertexM(adj_info.neighbors[8]);
+                    VISIT_VERTEX(adj_info.neighbors[8]);
                 case 8:
-                    VisitVertexM(adj_info.neighbors[7]);
+                    VISIT_VERTEX(adj_info.neighbors[7]);
                 case 7:
-                    VisitVertexM(adj_info.neighbors[6]);
+                    VISIT_VERTEX(adj_info.neighbors[6]);
                 case 6:
-                    VisitVertexM(adj_info.neighbors[5]);
+                    VISIT_VERTEX(adj_info.neighbors[5]);
                 case 5:
-                    VisitVertexM(adj_info.neighbors[4]);
+                    VISIT_VERTEX(adj_info.neighbors[4]);
                 case 4:
-                    VisitVertexM(adj_info.neighbors[3]);
+                    VISIT_VERTEX(adj_info.neighbors[3]);
                 case 3:
-                    VisitVertexM(adj_info.neighbors[2]);
+                    VISIT_VERTEX(adj_info.neighbors[2]);
                 case 2:
-                    VisitVertexM(adj_info.neighbors[1]);
+                    VISIT_VERTEX(adj_info.neighbors[1]);
                 case 1:
-                    VisitVertexM(adj_info.neighbors[0]);
+                    VISIT_VERTEX(adj_info.neighbors[0]);
                 case 0:
                     break;
             }
@@ -125,8 +128,16 @@ BFSResult BFSSingleThread(int start_house) {
 }
 
 
+/**
+ *  Multi threaded BFS context
+ */
 class BFSMultiThreadContext {
 public:
+    /**
+     *  Constructor of BFSMultiThreadContext
+     *  @param[in]  start_house     house to start search
+     *  @param[in]  num_threads     number of allowed threads
+     */
     BFSMultiThreadContext(int start_house, int num_threads)
         : start_house_(start_house)
         , start_house_index_(g_context.house_index_map[start_house_])
@@ -152,10 +163,16 @@ public:
         }
     }
 
+    /**
+     *  Destructor of BFSMultiThreadContext
+     */
     ~BFSMultiThreadContext() {
         FreeCharVector(check_map_);
     }
 
+    /**
+     *  Run the search
+     */
     BFSResult Run() {
         check_map_[start_house_] = 1;
 
@@ -219,12 +236,18 @@ private:
     int num_free_workers_;
     vector<ChildWorker> workers_;
 
+    /**
+     *  Helper function for BeginWorkAt (adjusted to pthread_create API spec)
+     */
     static void *BeginWorkAtStatic(void *param_) {
         WorkParam * param = (WorkParam *)param_;
         (param->self)->BeginWorkAt(param);
         return 0;
     }
     
+    /**
+     *  Worker main function
+     */
     void BeginWorkAt(WorkParam * param) {
         vector<int> & buf1 = AllocIntVector();
         buf1.clear();
@@ -357,6 +380,12 @@ private:
         FreeIntVector(buf1);
     }
 
+    /**
+     *  Visit the vertex
+     *  param[in]   v               Vertex to visit
+     *  param[in]   dist            Current distance
+     *  param[in]   next_vertices   Container for the next vertices
+     */
     inline void VisitVertex(int v, int dist, vector<int> * next_vertices) {
         // printf(" ptr : %x size(%d) \n", this, check_map_.size());
         if (check_map_[v]) {
@@ -378,6 +407,12 @@ private:
         }
     }
 
+    /**
+     *  Visit the vertex's neighbors
+     *  param[in]   v               Vertex to visit
+     *  param[in]   dist            Current distance
+     *  param[in]   next_vertices   Container for the next vertices
+     */
     inline void VisitNeighborsOf(int v, int dist, vector<int> * next_vertices) {
         auto & adj_info = g_context.adjlist[v];
         switch (adj_info.size) {
