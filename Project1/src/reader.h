@@ -15,6 +15,10 @@
 class Reader
 {
 public:
+    /**
+     *  Read the problem data from standard input
+     *  param[in]   context     context to fill with read data
+     */
     void Read(Context * context);
 };
 

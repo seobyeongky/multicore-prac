@@ -29,6 +29,10 @@ public:
         : free_vector_list_()
         , mutex_(PTHREAD_MUTEX_INITIALIZER) {}
 
+    /**
+     *  Allocate the vector
+     *  return      Allocated vector
+     */
     vector<T> & Alloc() {
         if (free_vector_list_.empty()) {
             return *(new vector<T>());
@@ -41,6 +45,10 @@ public:
         return *ret;
     }
 
+    /**
+     *  Free the vector
+     *  param[in]   vec     Vector to free
+     */
     void Free(vector<T> & vec) {
         pthread_mutex_lock(&mutex_);
         free_vector_list_.push_back(&vec);

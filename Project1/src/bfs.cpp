@@ -238,6 +238,7 @@ private:
 
     /**
      *  Helper function for BeginWorkAt (adjusted to pthread_create API spec)
+     *  return      It meens nothing(just exists for pthread_create API spec)
      */
     static void *BeginWorkAtStatic(void *param_) {
         WorkParam * param = (WorkParam *)param_;

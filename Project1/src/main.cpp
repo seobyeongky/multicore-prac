@@ -33,10 +33,17 @@ public:
         , num_allowed_threads_(num_allowed_threads) {
     }
 
+    /**
+     *  Begin work with separted thread
+     */
     void Work() {
         pthread_create(&thread_, 0, BFSThreadStatic, this);
     }
 
+    /**
+     *  Join the thread and update the given result
+     *  param[in]   result_to_update    Result to update
+     */
     void JoinAndUpdateResult(BFSResult & result_to_update) {
         pthread_join(thread_, (void **)nullptr);
         result_to_update.Update(result_);
@@ -47,6 +54,12 @@ private:
     BFSResult result_;
     int num_allowed_threads_;
 
+    /**
+     *  HouseWorker's working thread function.
+     *  Competitively takes a house and run appropriate BFS algorithm.
+     *  And update the result.
+     *  return      pointer of the BFSResult
+     */
     void *BFSThread() {
         while (g_house_index < (int)g_context.houses.size() - 1) {
 
@@ -72,6 +85,10 @@ private:
         return &result_;
     }
 
+    /**
+     *  Helper function for BFSThread (for pthread_create API spec)
+     *  param[in]   self    this pointer
+     */
     static void *BFSThreadStatic(void *self) {
         return ((HouseWorker *)self)->BFSThread();
     }
