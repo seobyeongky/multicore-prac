@@ -6,3 +6,22 @@ prac_pthread
 prac_mutex
 
 input*.txt
+
+
+TAGS
+.TAGS
+!TAGS/
+tags
+.tags
+!tags/
+gtags.files
+GTAGS
+GRTAGS
+GPATH
+GSYMS
+cscope.files
+cscope.out
+cscope.in.out
+cscope.po.out
+
+*.out
