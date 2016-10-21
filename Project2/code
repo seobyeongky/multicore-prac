@@ -1,0 +1,33 @@
+lock()
+    myK = k++
+    active.add(myK)
+    myRV = active.getReadView
+unlock()
+
+i = rand()
+read(i)
+write(x)
+
+lock()
+    active.remove(myK)
+unlock()
+
+
+
+main()
+    timer
+    for (i -> nthread)
+        getAandB()
+        thread-create(0
+
+
+
+thread_func()
+{
+    while (terminate)
+    {
+        one_transaction (3 steps)
+    }
+}
+
+
