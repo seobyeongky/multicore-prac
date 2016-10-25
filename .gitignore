@@ -25,3 +25,5 @@ cscope.in.out
 cscope.po.out
 
 *.out
+
+verbose_thread_*.txt
