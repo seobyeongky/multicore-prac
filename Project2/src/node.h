@@ -32,7 +32,7 @@ Node<T> * NodeErase(Node<T> ** head, Node<T> * node) {
 
     if (prev_node == nullptr) {
         // That means node is head
-        *head = nullptr;
+        *head = node->next;
     }
     
     return NodeErase(prev_node, node);
@@ -44,7 +44,7 @@ Node<T> * NodeErase(Node<T> * prev_node, Node<T> * node) {
         prev_node->next = node->next;
     }
 
-    delete node;
+    //delete node;
 
     return prev_node ? prev_node->next : nullptr;
 }

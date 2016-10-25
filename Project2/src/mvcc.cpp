@@ -137,8 +137,10 @@ void *UpdateAB(void *arg) {
         Node<ActiveThread> * my_node = NodePushFront(&g_active_thread_head, ActiveThread(self.id
                     , my_recent_version));
         Node<ActiveThread> *RV = nullptr;
+        //int count = 0;
         for (Node<ActiveThread> *node = g_active_thread_head;
                 node != nullptr; node = node->next) {
+            //printf("(%d,%d)", node->data.version, count++);
             NodePushFront(&RV, node->data);
         }
         pthread_mutex_unlock(&g_mutex);
