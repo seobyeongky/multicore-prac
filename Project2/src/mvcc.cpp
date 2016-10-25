@@ -1,3 +1,5 @@
+#define MY_MUTEX
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
@@ -42,12 +44,21 @@ struct ActiveThread {
         : id(id), version(version) {}
 };
 
-int g_k = 0;
+int g_exec_order = 0;
 int g_num_threads;
 int g_dura;
 bool g_over = false;
 bool g_verbose = false;
+#ifdef MY_MUTEX
+#include "my_mutex.h"
+MyMutex g_mutex;
+#define LOCK(x) x.Lock(thread_id)
+#define UNLOCK(x) x.Unlock(thread_id)
+#else
 pthread_mutex_t g_mutex = PTHREAD_MUTEX_INITIALIZER;
+#define LOCK(x) pthread_mutex_lock(&x)
+#define UNLOCK(x) pthread_mutex_unlock(&x)
+#endif
 Node<ActiveThread> * g_active_thread_head;
 vector<ThreadContext> g_contexts;
 const int A_PLUS_B = 100;
@@ -60,8 +71,9 @@ inline T Square(T x) {
 
 void GC() {
     int ref_min_version = INT_MAX;
+    int thread_id = g_num_threads + 100;
 
-    pthread_mutex_lock(&g_mutex);
+    LOCK(g_mutex);
     //printf("GC AC :");
     for (Node<ActiveThread> *node = g_active_thread_head;
             node != nullptr; node = node->next) {
@@ -71,7 +83,7 @@ void GC() {
         }
     }
     //printf("\n");
-    pthread_mutex_unlock(&g_mutex);
+    UNLOCK(g_mutex);
 
     for (ThreadContext & cx : g_contexts) { 
         if (cx.data_head && cx.data_head->data.version < ref_min_version) {
@@ -115,6 +127,7 @@ void * ScheduleGC(void *arg) {
 
 void *UpdateAB(void *arg) {
     ThreadContext & self = *((ThreadContext *)arg);
+    int thread_id = self.id;
     FILE * out;
 
     if (g_verbose) {
@@ -131,26 +144,26 @@ void *UpdateAB(void *arg) {
     }
 
     while (!g_over) {
-        pthread_mutex_lock(&g_mutex);
-        int my_version = g_k++;
+        LOCK(g_mutex);
+        int my_version = g_exec_order++;
         int my_recent_version = self.data_head->data.version;
         Node<ActiveThread> * my_node = NodePushFront(&g_active_thread_head, ActiveThread(self.id
                     , my_recent_version));
-        Node<ActiveThread> *RV = nullptr;
+        Node<ActiveThread> *rv = nullptr;
         //int count = 0;
         for (Node<ActiveThread> *node = g_active_thread_head;
                 node != nullptr; node = node->next) {
             //printf("(%d,%d)", node->data.version, count++);
-            NodePushFront(&RV, node->data);
+            NodePushFront(&rv, node->data);
         }
-        pthread_mutex_unlock(&g_mutex);
+        UNLOCK(g_mutex);
 
         int i = rand() % g_contexts.size();
         bool contains = false;
         int target_version;
         Data data_i;
         
-        for (Node<ActiveThread> * ac_node = RV;
+        for (Node<ActiveThread> * ac_node = rv;
                 ac_node != nullptr; ac_node = ac_node->next) {
             ActiveThread & active_thread = ac_node->data;
             if (active_thread.id == i) {
@@ -187,9 +200,9 @@ void *UpdateAB(void *arg) {
         NodePushFront(&self.data_head
                 , Data(my_version, data_x.A + data_i.A % 100, data_x.B - data_i.A % 100));
 
-        pthread_mutex_lock(&g_mutex);
+        LOCK(g_mutex);
         NodeErase(&g_active_thread_head, my_node);
-        pthread_mutex_unlock(&g_mutex);
+        UNLOCK(g_mutex);
 
         if (g_verbose) {
             timespec now_clock;
@@ -203,8 +216,13 @@ void *UpdateAB(void *arg) {
                 acc_time -= VERBOSE_OUTPUT_INTERVAL;
                 verbose_output_count++;
 
-                fprintf(out, "read-view (at %.1fsec)\n", verbose_output_count * VERBOSE_OUTPUT_INTERVAL / 1000.f);
-                for (Node<ActiveThread> *node = RV;
+                int rv_size = 0;
+                for (Node<ActiveThread> *node = rv;
+                        node != nullptr; node = node->next) {
+                    rv_size++;
+                }
+                fprintf(out, "%d\n", rv_size);
+                for (Node<ActiveThread> *node = rv;
                         node != nullptr; node = node->next) {
                     fprintf(out, "%d ", node->data.version);
                 }
@@ -214,7 +232,7 @@ void *UpdateAB(void *arg) {
             }
         }
 
-        DestroyNodes(&RV);
+        DestroyNodes(&rv);
 
         self.num_updates++;
     }
@@ -283,7 +301,7 @@ int main(int argc, char * argv []) {
         Data data;
         data.A = rand() % A_PLUS_B;
         data.B = A_PLUS_B - data.A;
-        data.version = g_k++;
+        data.version = g_exec_order++;
         NodePushFront(&cx->data_head, data);
         cx->num_updates = 0;
     }
