@@ -2,16 +2,26 @@
 
 #include <stdio.h>
 #include <time.h>
+#include <stdlib.h>
 
 MyMutex::MyMutex()
     : n_(-1) {}
 
 void MyMutex::Lock(int thread_id) {
     int count = 0;
+    __sync_val_compare_and_swap(&n_, -1, thread_id);
+    if (n_ == thread_id) return;
+
     do {
+        for (int j  = 0; j < 64; j++) {
+            static_cast<void> (0);
+        }
+        count++;
+        if (count > 20) {
+            timespec time_to_sleep = {0, 1000000};
+            nanosleep(&time_to_sleep, nullptr);
+        }
         __sync_val_compare_and_swap(&n_, -1, thread_id);
-        //jif (count++ > 10 * 1024) {
-        //}
     } while (n_ != thread_id);
 }
 
