@@ -1,3 +1,12 @@
+/*
+ * MVCC source
+ *
+ * @author Byeongky Seo
+ * @since 2016-10-21
+ */
+
+
+// Weather use MyMutex or pthread_mutex for the mutex.
 #define MY_MUTEX
 
 #include <stdio.h>
@@ -18,6 +27,7 @@
 
 using namespace std;
 
+// Data structure for A, B, version
 struct Data {
     int version;
     int A;
@@ -29,12 +39,14 @@ struct Data {
         : version(version), A(A), B(B) {}
 };
 
+// Thread working context structure
 struct ThreadContext {
     int id;
     Node<Data> * data_head;
     int num_updates;
 };
 
+// Node data for globally shared active thread list
 struct ActiveThread {
     int id;
     int version;
@@ -44,11 +56,11 @@ struct ActiveThread {
         : id(id), version(version) {}
 };
 
-int g_exec_order = 0;
-int g_num_threads;
-int g_dura;
-bool g_over = false;
-bool g_verbose = false;
+int g_exec_order = 0; // Global execution order
+int g_num_threads; // Number of threads
+int g_dura; // Duration parameter input
+bool g_over = false; // Timeover flag
+bool g_verbose = false; // Verbose paramter input flag
 #ifdef MY_MUTEX
 #include "my_mutex.h"
 MyMutex g_mutex;
@@ -59,22 +71,27 @@ pthread_mutex_t g_mutex = PTHREAD_MUTEX_INITIALIZER;
 #define LOCK(x) pthread_mutex_lock(&x)
 #define UNLOCK(x) pthread_mutex_unlock(&x)
 #endif
-Node<ActiveThread> * g_active_thread_head;
-vector<ThreadContext> g_contexts;
-const int A_PLUS_B = 100;
-const int VERBOSE_OUTPUT_INTERVAL = 100;
+Node<ActiveThread> * g_active_thread_head; // Globally shared active thread list
+vector<ThreadContext> g_contexts; // Thread working context container
+const int A_PLUS_B = 100; // Constant for initializing A, B
+const int VERBOSE_OUTPUT_INTERVAL = 100; // Verbose output interval constant (ms)
 
+/*
+ * Square utility function
+ */
 template <typename T>
 inline T Square(T x) {
     return x * x;
 }
 
+/*
+ * Collect the garabages
+ */
 void GC() {
     int ref_min_version = INT_MAX;
     int thread_id = g_num_threads + 100;
 
     LOCK(g_mutex);
-    //printf("GC AC :");
     for (Node<ActiveThread> *node = g_active_thread_head;
             node != nullptr; node = node->next) {
         if (node->next == nullptr) {
@@ -82,7 +99,6 @@ void GC() {
             break;
         }
     }
-    //printf("\n");
     UNLOCK(g_mutex);
 
     for (ThreadContext & cx : g_contexts) { 
@@ -90,8 +106,6 @@ void GC() {
             ref_min_version = cx.data_head->data.version;
         }
     }
-
-    //printf("GC under %d\n", ref_min_version);
 
     for (int i = 0; i < g_num_threads; i++) {
         ThreadContext & cx = g_contexts[i];
@@ -105,9 +119,6 @@ void GC() {
                 if (node != nullptr) {
                     node = node->next;
                 }
-                if (node != nullptr) {
-                    //printf("[%d] kill under : %d\n", i, node->data.version);
-                }
                 while (node != nullptr) {
                     node = NodeErase(prev_node, node);
                 }
@@ -117,6 +128,9 @@ void GC() {
     }
 }
 
+/*
+ * GC Scheduler
+ */
 void * ScheduleGC(void *arg) {
     while (!g_over) {
         GC();
@@ -125,6 +139,9 @@ void * ScheduleGC(void *arg) {
     return nullptr;
 }
 
+/*
+ * A, B Updater (main simulation logic)
+ */
 void *UpdateAB(void *arg) {
     ThreadContext & self = *((ThreadContext *)arg);
     int thread_id = self.id;
@@ -150,10 +167,8 @@ void *UpdateAB(void *arg) {
         Node<ActiveThread> * my_node = NodePushFront(&g_active_thread_head, ActiveThread(self.id
                     , my_recent_version));
         Node<ActiveThread> *rv = nullptr;
-        //int count = 0;
         for (Node<ActiveThread> *node = g_active_thread_head;
                 node != nullptr; node = node->next) {
-            //printf("(%d,%d)", node->data.version, count++);
             NodePushFront(&rv, node->data);
         }
         UNLOCK(g_mutex);
@@ -177,7 +192,6 @@ void *UpdateAB(void *arg) {
         if (contains) {
             for (Node<Data> *data_node = thread_i.data_head;
                     data_node != nullptr; data_node = data_node->next) {
-                //printf("[%d] ref %d : %d %d\n", self.id, i, target_version, data_node->data.version);
                 assert(data_node->data.version >= target_version);
                 if (data_node->data.version == target_version) {
                     data_i = data_node->data;
@@ -187,7 +201,6 @@ void *UpdateAB(void *arg) {
         } else {
             for (Node<Data> *data_node = thread_i.data_head;
                     data_node != nullptr; data_node = data_node->next) {
-                //printf("[%d] ref2 %d : %d %d\n", self.id, i, my_recent_version, data_node->data.version);
                 if (data_node->data.version < my_recent_version) {
                     data_i = data_node->data;
                     break;
@@ -244,6 +257,9 @@ void *UpdateAB(void *arg) {
     return nullptr;
 }
 
+/*
+ * Print the summation of A, B datas
+ */
 void PrintSum() {
     int sum = 0;
     for (int i = 0; i < g_num_threads; i++) {
@@ -256,6 +272,9 @@ void PrintSum() {
     cout << "sum : " << sum << endl;
 }
 
+/*
+ * Print the total throughput of the threads
+ */
 void PrintTotalThroughput() {
     int sum = 0;
     for (ThreadContext & cx : g_contexts) {
@@ -265,6 +284,9 @@ void PrintTotalThroughput() {
     cout << "Total throughput : " << ((double)sum / g_dura) << " (updates/sec)" << endl;
 }
 
+/*
+ * Print the fairness of the threads
+ */
 void PrintFairness() {
     long long int sum = 0;
     long long int sq_sum = 0;
@@ -278,6 +300,9 @@ void PrintFairness() {
     cout << "Fairness : " << fairness << endl;
 }
 
+/*
+ * Main entry function
+ */
 int main(int argc, char * argv []) {
     if (argc < 3) {
         puts("Not enough arguments");
@@ -286,10 +311,8 @@ int main(int argc, char * argv []) {
 
     g_num_threads = atoi(argv[1]);
     g_dura = atoi(argv[2]);
-    if (argc >= 4) {
-        if (!strcmp(argv[3], "verbose")) {
-            g_verbose = true;
-        }
+    if (argc >= 4 && !strcmp(argv[3], "verbose")) {
+        g_verbose = true;
     }
 
     vector<pthread_t> threads(g_num_threads);

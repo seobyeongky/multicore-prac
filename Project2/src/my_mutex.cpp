@@ -1,71 +1,58 @@
+/*
+ * MyMutex class implementation source
+ *
+ * @author Byeongky Seo
+ * @since 2016-10-25
+ */
+
 #include "my_mutex.h"
 
 #include <stdio.h>
 #include <time.h>
 #include <stdlib.h>
 
+const int EMPTY = -1;
+
 MyMutex::MyMutex()
-    : n_(-1), dummy_(2016) {}
+    : throne_(EMPTY), dummy_(2016) {}
 
+/*
+ * Lock
+ */
 void MyMutex::Lock(int thread_id) {
-    int count = 0;
-    __sync_val_compare_and_swap(&n_, -1, thread_id);
-    if (n_ == thread_id) return;
+    TakeTheIronThrone(thread_id);
+    if (throne_ == thread_id) return; // fast hi-pass for free situation
 
+    int count = 0;
     do {
+        // So we wait
         for (int j  = 0; j < 64; j++) {
             dummy_ += 398;
             dummy_ ^= 0x0018262;
-            //static_cast<void> (0);
         }
-        count++;
-        if (count > 10) {
+
+        if (count++ > 10) {
+            // There is no hope for my turn => just get some sleep
             timespec time_to_sleep = {0, 1000000};
             nanosleep(&time_to_sleep, nullptr);
         }
-        __sync_val_compare_and_swap(&n_, -1, thread_id);
-    } while (n_ != thread_id);
+
+        TakeTheIronThrone(thread_id); // Try again     
+    // Check weather my try was hit.
+    // This is the unique passing condition.
+    } while (throne_ != thread_id); 
 }
 
+/*
+ * Unlock
+ */
 void MyMutex::Unlock(int thread_id) {
-    n_ = -1;
+    throne_ = EMPTY;
 }
 
-
-    /*
-MyMutex::MyMutex()
-    : counter_(0), king_(0) {}
-
-
-
-void MyMutex::Lock() {
-    int i = counter_++;
-    int count = 0;
-    timespec time_to_sleep;
-    time_to_sleep.tv_sec = 0;
-
-    if (king_ == i) return;
-
-    while (true) {
-        __sync_synchronize();
-        if (king_ == i) break;
-
-        //printf("[%d] waiting %d\n", i, count);
-        int times = 5 * (i - king_);
-        for (int j  = 0; j < times; j++) {
-            static_cast<void> (0);
-        }
-        //count++;
-        //if (i - king_ <= 5 || true) continue;
-        if (count > 5 * 1024) {
-            printf("[%d] gonna sleep %d\n", i, 1000 * (i - king_));
-            time_to_sleep.tv_nsec = 1000 * (i - king_);
-            nanosleep(&time_to_sleep, 0);
-        }
-    }
+/*
+ * Take the Iron Throne if empty
+ */
+inline void MyMutex::TakeTheIronThrone(int thread_id) {
+    __sync_val_compare_and_swap(&throne_, EMPTY, thread_id);
 }
-
-void MyMutex::Unlock() {
-    king_++;
-}
-*/

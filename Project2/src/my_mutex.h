@@ -1,9 +1,15 @@
+/*
+ * MyMutex class header
+ *
+ * @author Byeongky Seo
+ * @since 2016-10-25
+ */
+
 #ifndef __PROJECT2_SRC_MY_MUTEX_H__
 #define __PROJECT2_SRC_MY_MUTEX_H__
 
-#include <vector>
-#include <atomic>
-
+// My mutex class
+// Simple implementation of lock-unlocking methodology
 class MyMutex {
 public:
     MyMutex();
@@ -12,12 +18,10 @@ public:
     void Unlock(int thread_id);
 
 private:
-    int n_;
+    int throne_;
     int dummy_;
-/*    std::atomic<int> counter_;
-    int king_;
-    std::vector<int> waitings;
-    */
+
+    void TakeTheIronThrone(int thread_id);
 };
 
 
