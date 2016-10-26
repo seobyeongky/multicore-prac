@@ -60,7 +60,7 @@ Node<T> * NodeErase(Node<T> * prev_node, Node<T> * node) {
         prev_node->next = node->next;
     }
 
-    //delete node;
+    delete node;
 
     return prev_node ? prev_node->next : nullptr;
 }
