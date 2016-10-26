@@ -13,6 +13,7 @@ public:
 
 private:
     int n_;
+    int dummy_;
 /*    std::atomic<int> counter_;
     int king_;
     std::vector<int> waitings;

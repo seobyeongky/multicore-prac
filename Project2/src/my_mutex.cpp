@@ -5,7 +5,7 @@
 #include <stdlib.h>
 
 MyMutex::MyMutex()
-    : n_(-1) {}
+    : n_(-1), dummy_(2016) {}
 
 void MyMutex::Lock(int thread_id) {
     int count = 0;
@@ -14,10 +14,12 @@ void MyMutex::Lock(int thread_id) {
 
     do {
         for (int j  = 0; j < 64; j++) {
-            static_cast<void> (0);
+            dummy_ += 398;
+            dummy_ ^= 0x0018262;
+            //static_cast<void> (0);
         }
         count++;
-        if (count > 20) {
+        if (count > 10) {
             timespec time_to_sleep = {0, 1000000};
             nanosleep(&time_to_sleep, nullptr);
         }
