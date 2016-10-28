@@ -223,6 +223,7 @@ void *UpdateAB(void *arg) {
             }
         }
 
+        /*
         if (!found) {
             printf("NOT FOUND!\n");
             printf("contains : %d\n", contains);
@@ -231,7 +232,7 @@ void *UpdateAB(void *arg) {
                     data_node != nullptr; data_node = data_node->next) {
                 printf("%d %d\n", data_node->data.version, my_version);
             }
-        }
+        }*/
 
         assert(found);
 
