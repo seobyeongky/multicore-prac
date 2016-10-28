@@ -26,12 +26,12 @@ void MyMutex::Lock(int thread_id) {
     int count = 0;
     do {
         // So we wait
-        for (int j  = 0; j < 64; j++) {
+        for (int j  = 0; j < 32; j++) {
             dummy_ += 398;
             dummy_ ^= 0x0018262;
         }
 
-        if (count++ > 10) {
+        if (count++ > 4) {
             // There is no hope for my turn => just get some sleep
             timespec time_to_sleep = {0, 1000000};
             nanosleep(&time_to_sleep, nullptr);

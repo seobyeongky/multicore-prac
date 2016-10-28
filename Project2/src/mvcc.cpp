@@ -215,11 +215,21 @@ void *UpdateAB(void *arg) {
             // Find the data of version_k just under the recent_version
             for (Node<Data> *data_node = thread_i.data_head;
                     data_node != nullptr; data_node = data_node->next) {
-                if (data_node->data.version < my_recent_version) {
+                if (data_node->data.version < my_version) {
                     data_i = data_node->data;
                     found = true;
                     break;
                 }
+            }
+        }
+
+        if (!found) {
+            printf("NOT FOUND!\n");
+            printf("contains : %d\n", contains);
+            printf("%d -> %d\n", self.id, i);
+            for (Node<Data> *data_node = thread_i.data_head;
+                    data_node != nullptr; data_node = data_node->next) {
+                printf("%d %d\n", data_node->data.version, my_version);
             }
         }
 
