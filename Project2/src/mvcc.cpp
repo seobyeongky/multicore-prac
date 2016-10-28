@@ -111,6 +111,9 @@ void GC() {
         ThreadContext & cx = g_contexts[i];
         for (Node<Data> * node = cx.data_head; node != nullptr; node = node->next) {
             if (node->data.version < ref_min_version) {
+                // Delete garbage...
+                // Because the data two steps before ref_min_version can be referenced,
+                // We should go further two steps
                 node = node->next;
                 if (node != nullptr) {
                     node = node->next;
@@ -161,11 +164,14 @@ void *UpdateAB(void *arg) {
     }
 
     while (!g_over) {
+
         LOCK(g_mutex);
         int my_version = g_exec_order++;
         int my_recent_version = self.data_head->data.version;
+        // Push my node to the active thread list
         Node<ActiveThread> * my_node = NodePushFront(&g_active_thread_head, ActiveThread(self.id
                     , my_recent_version));
+        // Copy the Read-View
         Node<ActiveThread> *rv = nullptr;
         for (Node<ActiveThread> *node = g_active_thread_head;
                 node != nullptr; node = node->next) {
@@ -173,11 +179,13 @@ void *UpdateAB(void *arg) {
         }
         UNLOCK(g_mutex);
 
+        // Select thread_i randomly
         int i = rand() % g_contexts.size();
         bool contains = false;
         int target_version;
         Data data_i;
         
+        // First, we find thread_i is in the active thread list
         for (Node<ActiveThread> * ac_node = rv;
                 ac_node != nullptr; ac_node = ac_node->next) {
             ActiveThread & active_thread = ac_node->data;
@@ -189,30 +197,41 @@ void *UpdateAB(void *arg) {
         }
 
         ThreadContext & thread_i = g_contexts[i];
+        bool found = false;
         if (contains) {
+            // If thread_i is in the active thread list,
+            // Find the the data of target version from thread_i's data list
             for (Node<Data> *data_node = thread_i.data_head;
                     data_node != nullptr; data_node = data_node->next) {
                 assert(data_node->data.version >= target_version);
                 if (data_node->data.version == target_version) {
                     data_i = data_node->data;
+                    found = true;
                     break;
                 }
             }
         } else {
+            // If thread_i is not in the active thread list
+            // Find the data of version_k just under the recent_version
             for (Node<Data> *data_node = thread_i.data_head;
                     data_node != nullptr; data_node = data_node->next) {
                 if (data_node->data.version < my_recent_version) {
                     data_i = data_node->data;
+                    found = true;
                     break;
                 }
             }
         }
 
+        assert(found);
+
         Data data_x(self.data_head->data);
 
+        // Push new data node
         NodePushFront(&self.data_head
                 , Data(my_version, data_x.A + data_i.A % 100, data_x.B - data_i.A % 100));
 
+        // Erase my node from active thread list
         LOCK(g_mutex);
         NodeErase(&g_active_thread_head, my_node);
         UNLOCK(g_mutex);
