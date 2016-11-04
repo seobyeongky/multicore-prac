@@ -223,17 +223,6 @@ void *UpdateAB(void *arg) {
             }
         }
 
-        /*
-        if (!found) {
-            printf("NOT FOUND!\n");
-            printf("contains : %d\n", contains);
-            printf("%d -> %d\n", self.id, i);
-            for (Node<Data> *data_node = thread_i.data_head;
-                    data_node != nullptr; data_node = data_node->next) {
-                printf("%d %d\n", data_node->data.version, my_version);
-            }
-        }*/
-
         assert(found);
 
         Data data_x(self.data_head->data);
