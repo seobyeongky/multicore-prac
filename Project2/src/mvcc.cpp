@@ -112,12 +112,10 @@ void GC() {
         for (Node<Data> * node = cx.data_head; node != nullptr; node = node->next) {
             if (node->data.version < ref_min_version) {
                 // Delete garbage...
-                // Because the data two steps before ref_min_version can be referenced,
-                // We should go further two steps
+                // Because the data one steps before ref_min_version can be referenced,
+                // We should go further one steps
                 node = node->next;
-                if (node != nullptr) {
-                    node = node->next;
-                }
+
                 Node<Data> * prev_node = node;
                 if (node != nullptr) {
                     node = node->next;
