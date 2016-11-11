@@ -27,3 +27,8 @@ cscope.po.out
 *.out
 
 verbose_thread_*.txt
+
+!storage/mroonga/build
+!dbug/user.r
+cscope* 
+
