@@ -179,4 +179,26 @@ check_table_access(THD *thd, ulong requirements,TABLE_LIST *tables,
 { return false; }
 #endif /*NO_EMBEDDED_ACCESS_CHECKS*/
 
+class Commander
+{
+public:
+    Commander(THD *thd);
+
+    void do_command_phase_1();
+    void do_command_phase_2();
+    void do_command_cleanup();
+
+    bool dispatch_command_phase_1(enum enum_server_command command,
+          char* packet, uint packet_length, bool force_no_pending);
+    void dispatch_command_phase_2();
+
+public:
+    bool return_value;
+
+private:
+    THD *thd;
+    enum enum_server_command command;
+    bool do_end_of_statement;
+};
+
 #endif /* SQL_PARSE_INCLUDED */

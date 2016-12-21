@@ -23,6 +23,7 @@
 #include <sql_audit.h>
 #include <debug_sync.h>
 #include <threadpool.h>
+#include <sql_parse.h>
 
 
 /* Threadpool parameters */
@@ -219,7 +220,6 @@ int threadpool_process_request(THD *thd)
     goto end;
   }
 
-
   /*
     In the loop below, the flow is essentially the copy of thead-per-connections
     logic, see do_handle_one_connection() in sql_connect.c
@@ -235,7 +235,16 @@ int threadpool_process_request(THD *thd)
     thd->net.reading_or_writing= 0;
     mysql_audit_release(thd);
 
-    if ((retval= do_command(thd)) != 0)
+    Commander commander(thd);
+    // FIXME : force no pending!!!
+    commander.do_command_phase_1();
+    if (commander.return_value == 0)
+    {
+        commander.dispatch_command_phase_2();
+        commander.do_command_phase_2();
+    }
+    commander.do_command_cleanup();
+    if ((retval= commander.return_value) != 0)
       goto end;
 
     if (!thd_is_connection_alive(thd))

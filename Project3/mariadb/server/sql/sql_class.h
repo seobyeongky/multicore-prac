@@ -37,6 +37,8 @@
 #include "thr_lock.h"       /* thr_lock_type, THR_LOCK_DATA, THR_LOCK_INFO */
 #include "thr_timer.h"
 
+//#include "sql_parse.h"      /* Commander */
+
 #include "sql_digest_stream.h"            // sql_digest_state
 
 #include <mysql/psi/mysql_stage.h>
@@ -44,6 +46,8 @@
 #include <mysql/psi/mysql_idle.h>
 #include <mysql/psi/mysql_table.h>
 #include <mysql_com_server.h>
+
+class Commander;
 
 extern "C"
 void set_thd_stage_info(void *thd,
@@ -2022,6 +2026,9 @@ public:
     allocated) strings, which memory won't go away over time.
   */
   const char *proc_info;
+
+  bool pending;
+  Commander * commander;
 
 private:
   unsigned int m_current_stage_key;

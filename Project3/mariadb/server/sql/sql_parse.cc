@@ -668,7 +668,9 @@ void execute_init_command(THD *thd, LEX_STRING *init_command,
   */
   save_vio= thd->net.vio;
   thd->net.vio= 0;
-  dispatch_command(COM_QUERY, thd, buf, len);
+  Commander commander(thd);
+  commander.dispatch_command_phase_1(COM_QUERY, buf, len, true);
+  commander.dispatch_command_phase_2();
   thd->client_capabilities= save_client_capabilities;
   thd->net.vio= save_vio;
 
@@ -900,6 +902,12 @@ static bool wsrep_node_is_ready(THD *thd)
 }
 #endif
 
+
+Commander::Commander(THD *thd)
+    : thd(thd)
+{
+}
+
 /**
   Read one command from connection and execute it (query or simple command).
   This function is called in loop from thread function.
@@ -912,9 +920,9 @@ static bool wsrep_node_is_ready(THD *thd)
     1  request of thread shutdown (see dispatch_command() description)
 */
 
-bool do_command(THD *thd)
+void Commander::do_command_phase_1()
 {
-  bool return_value;
+  return_value = 0;
   char *packet= 0;
 #ifdef WITH_WSREP
   ulong packet_length= 0; // just to avoid (false positive) compiler warning
@@ -922,8 +930,7 @@ bool do_command(THD *thd)
   ulong packet_length;
 #endif /* WITH_WSREP */
   NET *net= &thd->net;
-  enum enum_server_command command;
-  DBUG_ENTER("do_command");
+  DBUG_ENTER("do_command_phase_1");
 
 #ifdef WITH_WSREP
   if (WSREP(thd))
@@ -1105,7 +1112,15 @@ bool do_command(THD *thd)
 
   DBUG_ASSERT(packet_length);
   DBUG_ASSERT(!thd->apc_target.is_enabled());
-  return_value= dispatch_command(command, thd, packet+1, (uint) (packet_length-1));
+  return_value= dispatch_command_phase_1(command, packet+1, (uint) (packet_length-1), false);
+
+out:
+  DBUG_VOID_RETURN;
+}
+
+
+void Commander::do_command_phase_2() {
+  DBUG_ENTER("do_command_phase_2");
 #ifdef WITH_WSREP
   if (WSREP(thd))
   {
@@ -1122,8 +1137,9 @@ bool do_command(THD *thd)
         WSREP_WARN("For retry temporally setting character set to : %s",
                    my_charset_latin1.csname);
       }
-      return_value= dispatch_command(command, thd, thd->wsrep_retry_query,
-                                     thd->wsrep_retry_query_len);
+      return_value= dispatch_command_phase_1(command, thd->wsrep_retry_query,
+                                     thd->wsrep_retry_query_len, true);
+      dispatch_command_phase_2();
       thd->variables.character_set_client = current_charset;
     }
 
@@ -1137,14 +1153,21 @@ bool do_command(THD *thd)
   }
 #endif /* WITH_WSREP */
   DBUG_ASSERT(!thd->apc_target.is_enabled());
+  DBUG_VOID_RETURN;
+}
 
-out:
+
+void Commander::do_command_cleanup()
+{
+  DBUG_ENTER("do_command_cleanup");
   thd->lex->restore_set_statement_var();
   /* The statement instrumentation must be closed in all cases. */
   DBUG_ASSERT(thd->m_digest == NULL);
   DBUG_ASSERT(thd->m_statement_psi == NULL);
-  DBUG_RETURN(return_value);
+  DBUG_VOID_RETURN;
 }
+
+
 #endif  /* EMBEDDED_LIBRARY */
 
 /**
@@ -1235,13 +1258,13 @@ static my_bool deny_updates_if_read_only_option(THD *thd,
     1   request of thread shutdown, i. e. if command is
         COM_QUIT/COM_SHUTDOWN
 */
-bool dispatch_command(enum enum_server_command command, THD *thd,
-		      char* packet, uint packet_length)
+bool Commander::dispatch_command_phase_1(enum enum_server_command command,
+          char* packet, uint packet_length, bool force_no_pending)
 {
   NET *net= &thd->net;
   bool error= 0;
-  bool do_end_of_statement= true;
-  DBUG_ENTER("dispatch_command");
+  do_end_of_statement= true;
+  DBUG_ENTER("dispatch_command_phase_1");
   DBUG_PRINT("info", ("command: %d", command));
 
   inc_thread_running();
@@ -1927,7 +1950,17 @@ bool dispatch_command(enum enum_server_command command, THD *thd,
     do_end_of_statement= true;
 
 #endif /* WITH_WSREP */
+  DBUG_RETURN(error);
+}
 
+
+
+
+
+
+void Commander::dispatch_command_phase_2()
+{
+  DBUG_ENTER("dispatch_command_phase_2");
   if (do_end_of_statement)
   {
     DBUG_ASSERT(thd->derived_tables == NULL &&
@@ -1985,7 +2018,7 @@ bool dispatch_command(enum enum_server_command command, THD *thd,
   /* Check that some variables are reset properly */
   DBUG_ASSERT(thd->abort_on_warning == 0);
   thd->lex->restore_set_statement_var();
-  DBUG_RETURN(error);
+  DBUG_VOID_RETURN;
 }
 
 

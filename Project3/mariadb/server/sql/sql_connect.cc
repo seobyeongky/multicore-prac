@@ -1344,12 +1344,32 @@ void do_handle_one_connection(THD *thd_arg)
       goto end_thread;
     }      
 
+    thd->commander = new Commander(thd);
+
     while (thd_is_connection_alive(thd))
     {
       mysql_audit_release(thd);
-      if (do_command(thd))
-	break;
+      
+      thd->commander->do_command_phase_1();
+      if (thd->commander->return_value)
+      {
+        thd->commander->do_command_cleanup();
+        break;
+      }
+
+      if (thd->pending) break;
+
+      thd->commander->dispatch_command_phase_2();
+      thd->commander->do_command_phase_2();
+      thd->commander->do_command_cleanup();
+      if (thd->commander->return_value) 
+      {
+          break;
+      }
     }
+    
+    delete thd->commander;
+
     end_connection(thd);
 
 #ifdef WITH_WSREP

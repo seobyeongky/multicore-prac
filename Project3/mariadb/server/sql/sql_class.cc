@@ -904,6 +904,7 @@ THD::THD(bool is_wsrep_applier)
    wsrep_apply_format(0),
    wsrep_ignore_table(false)
 #endif
+   , pending(false)
 {
   ulong tmp;
 
@@ -1464,6 +1465,7 @@ void THD::init(void)
   debug_sync_init_thread(this);
 #endif /* defined(ENABLED_DEBUG_SYNC) */
   apc_target.init(&LOCK_thd_data);
+  pending = false;
   DBUG_VOID_RETURN;
 }
 
