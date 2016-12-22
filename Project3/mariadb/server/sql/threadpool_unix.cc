@@ -1274,12 +1274,12 @@ void tp_rerun_pended_thd(THD *thd)
     int count = 0;
     while (thd->pend_ready_state == 0)
     {
-      __sync_synchronize();
+      //__sync_synchronize();
       count++;
       if (count % 1000 == 0)
       {
-          printf("(%d)", thd->thread_id);
-          my_sleep(1000 * 1000);
+          //printf("(%d)", thd->thread_id);
+          my_sleep(1000);
       }
     }
     if (count > 5) {
