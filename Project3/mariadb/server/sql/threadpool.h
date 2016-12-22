@@ -47,6 +47,8 @@ extern void tp_end(void);
 /* Used in SHOW for threadpool_idle_thread_count */
 extern int  tp_get_idle_thread_count();
 
+extern void tp_rerun_pended_thd(THD *);
+
 /*
   Threadpool statistics
 */

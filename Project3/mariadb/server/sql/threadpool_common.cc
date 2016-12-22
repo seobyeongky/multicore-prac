@@ -229,28 +229,57 @@ int threadpool_process_request(THD *thd)
     (SSL can preread and cache incoming data, and vio->has_data() checks if it 
     was the case).
   */
+  if (!thd->is_pended)
+  {
+    //printf("[%d] new commander\n", thd->thread_id);
+    thd->commander = new Commander(thd);
+  }
+  else
+  {
+    //printf("[%d] it is pended thd\n", thd->thread_id);
+    thd->is_pended = false;
+    goto from_pend;
+  }
+
   for(;;)
   {
     Vio *vio;
     thd->net.reading_or_writing= 0;
     mysql_audit_release(thd);
-
-    Commander commander(thd);
-    // FIXME : force no pending!!!
-    commander.do_command_phase_1();
-    if (commander.return_value == 0)
-    {
-        commander.dispatch_command_phase_2();
-        commander.do_command_phase_2();
+ 
+    thd->commander->do_command_phase_1();
+    if (thd->commander->return_value) 
+    {  
+      //printf("[%d] do_command_phase_1 failed\n", thd->thread_id);
+      thd->commander->do_command_cleanup();
+      retval= 1;
+      goto end_with_cleanup;
     }
-    commander.do_command_cleanup();
-    if ((retval= commander.return_value) != 0)
-      goto end;
 
+    if (thd->is_pended)
+    {
+      //printf("[%d] is just pended\n", thd->thread_id);
+      retval= 1653;
+      thd->pend_ready_to_rerun = true;
+      goto end;
+    }
+    
+from_pend:
+    thd->commander->dispatch_command_phase_2();
+    thd->commander->do_command_phase_2();
+    thd->commander->do_command_cleanup();
+    if (thd->commander->return_value) 
+    {
+      //printf("[%d] do_command_phase_2 failed\n", thd->thread_id);
+      retval= 1;
+      goto end_with_cleanup;
+    }
+    
     if (!thd_is_connection_alive(thd))
     {
+      //printf("[%d] lost connection\n", thd->thread_id);
       retval= 1;
-      goto end;
+      goto end_with_cleanup;
     }
 
     vio= thd->net.vio;
@@ -259,10 +288,12 @@ int threadpool_process_request(THD *thd)
       /* More info on this debug sync is in sql_parse.cc*/
       DEBUG_SYNC(thd, "before_do_command_net_read");
       thd->net.reading_or_writing= 1;
-      goto end;
+      goto end_with_cleanup;
     }
   }
 
+end_with_cleanup:
+  delete thd->commander;
 end:
   worker_context.restore();
   return retval;

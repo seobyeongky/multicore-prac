@@ -1544,13 +1544,17 @@ loop:
 	}
 }
 
+
 /******************************************************//**
 This function is called, e.g., when a transaction wants to commit. It checks
 that the log has been written to the log file up to the last log entry written
 by the transaction. If there is a flush running, it waits and checks if the
 flush flushed enough. If not, starts a new flush. */
+
+// return 0 : ok
+// return 1 : pended
 UNIV_INTERN
-void
+int
 log_write_up_to(
 /*============*/
 	lsn_t	lsn,	/*!< in: log sequence number up to which
@@ -1558,10 +1562,15 @@ log_write_up_to(
 			LSN_MAX if not specified */
 	ulint	wait,	/*!< in: LOG_NO_WAIT, LOG_WAIT_ONE_GROUP,
 			or LOG_WAIT_ALL_GROUPS */
-	ibool	flush_to_disk)
+	ibool	flush_to_disk,
 			/*!< in: TRUE if we want the written log
 			also to be flushed to disk */
+    void (*callback)(void *),
+            /*!< in: callback>*/
+    void * callback_arg)
 {
+    //printf("[%d] log_write_up_to(%d,%d,%d)\n", pthread_self(), lsn, wait, flush_to_disk);
+
 	log_group_t*	group;
 	ulint		start_offset;
 	ulint		end_offset;
@@ -1580,7 +1589,7 @@ log_write_up_to(
 		/* Recovery is running and no operations on the log files are
 		allowed yet (the variable name .._no_ibuf_.. is misleading) */
 
-		return;
+		return 0;
 	}
 
 loop:
@@ -1602,9 +1611,11 @@ loop:
 	if (flush_to_disk
 	    && log_sys->flushed_to_disk_lsn >= lsn) {
 
+        //printf("[%d] Already done! Thank you. (F)\n", pthread_self());
+
 		mutex_exit(&(log_sys->mutex));
 
-		return;
+		return 0;
 	}
 
 	if (!flush_to_disk
@@ -1612,26 +1623,45 @@ loop:
 		|| (log_sys->written_to_some_lsn >= lsn
 		    && wait != LOG_WAIT_ALL_GROUPS))) {
 
+        //printf("[%d] Already done! Thank you.\n", pthread_self());
+
 		mutex_exit(&(log_sys->mutex));
 
-		return;
+		return 0;
 	}
 
 	if (log_sys->n_pending_writes > 0) {
 		/* A write (+ possibly flush to disk) is running */
+        // printf("[%d] A write is running\n", pthread_self());
 
 		if (flush_to_disk
 		    && log_sys->current_flush_lsn >= lsn) {
 			/* The write + flush will write enough: wait for it to
 			complete */
 
-			goto do_waits;
+            //printf("[%d] Wait for it to complete (flush to disk)\n", pthread_self());
+            if (callback != NULL)
+            {
+                lsn_callback_t lsn_callback;
+                lsn_callback.func = callback;
+                lsn_callback.arg = callback_arg;
+                log_sys->lsn_callbacks.push_back(lsn_callback);
+                mutex_exit(&(log_sys->mutex));
+                //mutex_enter(&(log_sys->lsn_callbacks_mutex));
+                //mutex_exit(&(log_sys->lsn_callbacks_mutex));
+                return 1;
+            }
+            else
+            {
+			    goto do_waits;
+            }
 		}
 
 		if (!flush_to_disk
 		    && log_sys->write_lsn >= lsn) {
 			/* The write will write enough: wait for it to
 			complete */
+            // printf("[%d] Wait for it to complete (no flush to disk)\n", pthread_self());
 
 			goto do_waits;
 		}
@@ -1641,10 +1671,13 @@ loop:
 		/* Wait for the write to complete and try to start a new
 		write */
 
+        // printf("[%d] Wait for it to complete and try to start a new write\n", pthread_self());
 		os_event_wait(log_sys->no_flush_event);
 
 		goto loop;
 	}
+
+    // printf("[%d] OK I am the flusher\n", pthread_self());
 
 	if (!flush_to_disk
 	    && log_sys->buf_free == log_sys->buf_next_to_write) {
@@ -1652,7 +1685,7 @@ loop:
 
 		mutex_exit(&(log_sys->mutex));
 
-		return;
+		return 0;
 	}
 
 #ifdef UNIV_DEBUG
@@ -1759,11 +1792,19 @@ loop:
 	write_lsn = log_sys->write_lsn;
 	flush_lsn = log_sys->flushed_to_disk_lsn;
 
+    for (std::vector<lsn_callback_t>::iterator it = log_sys->lsn_callbacks.begin();
+            it != log_sys->lsn_callbacks.end();
+            it++)
+    {
+        it->func(it->arg);
+    }
+    log_sys->lsn_callbacks.clear();
+
 	mutex_exit(&(log_sys->mutex));
 
 	innobase_mysql_log_notify(write_lsn, flush_lsn);
 
-	return;
+	return 0;
 
 do_waits:
 	mutex_exit(&(log_sys->mutex));

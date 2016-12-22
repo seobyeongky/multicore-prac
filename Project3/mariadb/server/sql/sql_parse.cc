@@ -50,6 +50,7 @@
 #include "sql_connect.h"      // decrease_user_connections,
                               // check_mqh,
                               // reset_mqh
+                              // finalize_phase
 #include "sql_rename.h"       // mysql_rename_tables
 #include "sql_tablespace.h"   // mysql_alter_tablespace
 #include "hostname.h"         // hostname_cache_refresh
@@ -1507,7 +1508,8 @@ bool Commander::dispatch_command_phase_1(enum enum_server_command command,
     if (WSREP_ON)
       wsrep_mysql_parse(thd, thd->query(), thd->query_length(), &parser_state);
     else
-      mysql_parse(thd, thd->query(), thd->query_length(), &parser_state);
+      mysql_parse(thd, thd->query(), thd->query_length(), &parser_state,
+              finalize_phase, (void*)thd);
 
     while (!thd->killed && (parser_state.m_lip.found_semicolon != NULL) &&
            ! thd->is_error())
@@ -1594,7 +1596,8 @@ bool Commander::dispatch_command_phase_1(enum enum_server_command command,
       if (WSREP_ON)
         wsrep_mysql_parse(thd, beginning_of_next_stmt, length, &parser_state);
       else
-        mysql_parse(thd, beginning_of_next_stmt, length, &parser_state);
+        mysql_parse(thd, beginning_of_next_stmt, length, &parser_state,
+                finalize_phase, (void*)thd);
 
     }
 
@@ -7271,7 +7274,8 @@ static void wsrep_mysql_parse(THD *thd, char *rawbuf, uint length,
 */
 
 void mysql_parse(THD *thd, char *rawbuf, uint length,
-                 Parser_state *parser_state)
+                 Parser_state *parser_state,
+                 void(*callback)(void*), void *callback_arg)
 {
   int error __attribute__((unused));
   DBUG_ENTER("mysql_parse");
@@ -7347,6 +7351,17 @@ void mysql_parse(THD *thd, char *rawbuf, uint length,
                                  &thd->security_ctx->priv_user[0],
                                  (char *) thd->security_ctx->host_or_ip,
                                  0);
+
+
+          if (callback != NULL) 
+          {
+            thd->pending_callback = callback;
+            thd->pending_callback_arg = callback_arg;
+          }
+          else
+          {
+            thd->pending_callback = NULL;
+          }
 
           error= mysql_execute_command(thd);
           MYSQL_QUERY_EXEC_DONE(error);

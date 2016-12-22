@@ -1262,6 +1262,32 @@ void tp_add_connection(THD *thd)
   DBUG_VOID_RETURN;
 }
 
+void tp_rerun_pended_thd(THD *thd)
+{
+  DBUG_ENTER("tp_rerun_pended_thd");
+
+  connection_t *connection= (connection_t*)thd->event_scheduler.data;
+  if (connection)
+  {
+    thread_group_t *group= connection->thread_group;
+    // simple busy waiting... wait for ready
+    int count = 0;
+    while (!thd->pend_ready_to_rerun)
+    {
+      __sync_synchronize();
+      count++;
+      if (count % 1000 == 0) {
+          my_sleep(1000);
+      }
+    }
+    /*if (count > 5) {
+        printf("waited %d\n", count);
+    }*/
+    queue_put(group, connection);
+  }
+  DBUG_VOID_RETURN;
+}
+
 
 /**
   Terminate connection.
@@ -1438,26 +1464,26 @@ static void handle_event(connection_t *connection)
 {
 
   DBUG_ENTER("handle_event");
-  int err;
+  int ret;
 
   if (!connection->logged_in)
   {
-    err= threadpool_add_connection(connection->thd);
+    ret= threadpool_add_connection(connection->thd);
     connection->logged_in= true;
   }
   else 
   {
-    err= threadpool_process_request(connection->thd);
+    ret= threadpool_process_request(connection->thd);
   }
 
-  if(err)
+  if(ret)
     goto end;
 
   set_wait_timeout(connection);
-  err= start_io(connection);
+  ret= start_io(connection);
 
 end:
-  if (err)
+  if (ret != 0 && ret != 1653)
     connection_abort(connection);
 
   DBUG_VOID_RETURN;

@@ -254,10 +254,12 @@ trx_get_trx_by_xid(
 If required, flushes the log to disk if we called trx_commit_for_mysql()
 with trx->flush_log_later == TRUE. */
 UNIV_INTERN
-void
+int
 trx_commit_complete_for_mysql(
 /*==========================*/
-	trx_t*	trx)	/*!< in/out: transaction */
+	trx_t*	trx,	/*!< in/out: transaction */
+    void(*callback)(void*)= NULL,
+    void *callback_arg= NULL)
 	MY_ATTRIBUTE((nonnull));
 /**********************************************************************//**
 Marks the latest SQL statement ended. */

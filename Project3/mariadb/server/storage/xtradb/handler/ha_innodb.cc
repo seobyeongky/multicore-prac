@@ -4910,8 +4910,13 @@ innobase_commit(
 		this one, to allow then to group commit with us. */
 		thd_wakeup_subsequent_commits(thd, 0);
 
-		trx_commit_complete_for_mysql(trx);
-                trx_deregister_from_2pc(trx);
+		if (1 == trx_commit_complete_for_mysql(trx, thd->pending_callback, thd->pending_callback_arg))
+        {
+            thd->is_pended = true;
+            thd->pend_ready_to_rerun = false;
+        }
+
+        trx_deregister_from_2pc(trx);
 	} else {
 		/* We just mark the SQL statement ended and do not do a
 		transaction commit */

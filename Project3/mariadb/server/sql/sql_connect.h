@@ -60,6 +60,8 @@ int get_or_create_user_conn(THD *thd, const char *user,
                             const char *host, const USER_RESOURCES *mqh);
 int check_for_max_user_connections(THD *thd, USER_CONN *uc);
 
+void finalize_phase(void *arg);
+
 extern HASH global_user_stats;
 extern HASH global_client_stats;
 extern HASH global_table_stats;

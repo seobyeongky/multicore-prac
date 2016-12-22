@@ -1340,13 +1340,16 @@ trx_finalize_for_fts(
 If required, flushes the log to disk based on the value of
 innodb_flush_log_at_trx_commit. */
 static
-void
+int
 trx_flush_log_if_needed_low(
 /*========================*/
 	lsn_t	lsn,	/*!< in: lsn up to which logs are to be
 			flushed. */
-	trx_t*	trx)	/*!< in: transaction */
+	trx_t*	trx,	/*!< in: transaction */
+    void(*callback)(void *)=NULL,
+    void *callback_arg=NULL)
 {
+    int ret = 0;
 	ulint	flush_log_at_trx_commit;
 
 	flush_log_at_trx_commit = srv_use_global_flush_log_at_trx_commit
@@ -1358,35 +1361,42 @@ trx_flush_log_if_needed_low(
 		/* Do nothing */
 		break;
 	case 1:
-        case 3:
+    case 3:
 		/* Write the log and optionally flush it to disk */
-		log_write_up_to(lsn, LOG_WAIT_ONE_GROUP,
-				srv_unix_file_flush_method != SRV_UNIX_NOSYNC);
+		ret = log_write_up_to(lsn, LOG_WAIT_ONE_GROUP,
+				srv_unix_file_flush_method != SRV_UNIX_NOSYNC,
+                callback,
+                callback_arg);
 		break;
 	case 2:
 		/* Write the log but do not flush it to disk */
-		log_write_up_to(lsn, LOG_WAIT_ONE_GROUP, FALSE);
+		ret = log_write_up_to(lsn, LOG_WAIT_ONE_GROUP, FALSE);
 
 		break;
 	default:
 		ut_error;
 	}
+
+    return ret;
 }
 
 /**********************************************************************//**
 If required, flushes the log to disk based on the value of
 innodb_flush_log_at_trx_commit. */
 static MY_ATTRIBUTE((nonnull))
-void
+int
 trx_flush_log_if_needed(
 /*====================*/
 	lsn_t	lsn,	/*!< in: lsn up to which logs are to be
 			flushed. */
-	trx_t*	trx)	/*!< in/out: transaction */
+	trx_t*	trx,	/*!< in/out: transaction */
+    void(*callback)(void *arg)= NULL,
+    void *callback_arg= NULL)
 {
 	trx->op_info = "flushing log";
-	trx_flush_log_if_needed_low(lsn, trx);
+	int ret = trx_flush_log_if_needed_low(lsn, trx, callback, callback_arg);
 	trx->op_info = "";
+    return ret;
 }
 
 /****************************************************************//**
@@ -1951,17 +1961,19 @@ trx_commit_for_mysql(
 If required, flushes the log to disk if we called trx_commit_for_mysql()
 with trx->flush_log_later == TRUE. */
 UNIV_INTERN
-void
+int
 trx_commit_complete_for_mysql(
 /*==========================*/
-	trx_t*	trx)	/*!< in/out: transaction */
+	trx_t*	trx, 	/*!< in/out: transaction */
+    void(*callback)(void *),
+    void *callback_arg)
 {
 	ut_a(trx);
 
 	if (!trx->must_flush_log_later
 	    || thd_requested_durability(trx->mysql_thd)
 	       == HA_IGNORE_DURABILITY) {
-		return;
+		return 0;
 	}
 
 	ulint	flush_log_at_trx_commit;
@@ -1971,12 +1983,14 @@ trx_commit_complete_for_mysql(
 		: thd_flush_log_at_trx_commit(trx->mysql_thd);
 
 	if (flush_log_at_trx_commit == 1 && trx->active_commit_ordered) {
-		return;
+		return 0;
 	}
 
-	trx_flush_log_if_needed(trx->commit_lsn, trx);
+	int ret = trx_flush_log_if_needed(trx->commit_lsn, trx, callback, callback_arg);
 
 	trx->must_flush_log_later = FALSE;
+
+    return ret;
 }
 
 /**********************************************************************//**

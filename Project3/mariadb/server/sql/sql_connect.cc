@@ -38,6 +38,8 @@
 #include "sql_callback.h"
 #include "wsrep_mysqld.h"
 
+#include "threadpool.h" // tp_rerun_pended_thd
+
 HASH global_user_stats, global_client_stats, global_table_stats;
 HASH global_index_stats;
 /* Protects the above global stats */
@@ -1291,9 +1293,95 @@ bool thd_is_connection_alive(THD *thd)
   return FALSE;
 }
 
+
+void thd_loop(THD *thd, bool from_pending)
+{
+  for (;;)
+  {
+    bool create_user= TRUE;
+
+    if (from_pending) {
+        from_pending= false;
+        create_user= FALSE;
+        goto from_pend;
+    }
+
+    mysql_socket_set_thread_owner(thd->net.vio->mysql_socket);
+    if (thd_prepare_connection(thd))
+    {
+      create_user= FALSE;
+      goto end_thread;
+    }      
+
+    thd->commander = new Commander(thd);
+
+    while (thd_is_connection_alive(thd))
+    {
+      mysql_audit_release(thd);
+      
+      thd->commander->do_command_phase_1();
+      if (thd->commander->return_value)
+      {
+        thd->commander->do_command_cleanup();
+        break;
+      }
+
+      if (thd->is_pended) {
+        goto pend_thread;
+      }
+
+from_pend:
+      thd->commander->dispatch_command_phase_2();
+      thd->commander->do_command_phase_2();
+      thd->commander->do_command_cleanup();
+      if (thd->commander->return_value) 
+      {
+        break;
+      }
+    }
+    
+    delete thd->commander;
+
+    end_connection(thd);
+
+#ifdef WITH_WSREP
+  if (WSREP(thd))
+  {
+    mysql_mutex_lock(&thd->LOCK_wsrep_thd);
+    thd->wsrep_query_state= QUERY_EXITING;
+    mysql_mutex_unlock(&thd->LOCK_wsrep_thd);
+  }
+#endif
+end_thread:
+    close_connection(thd);
+
+    if (thd->userstat_running)
+      update_global_user_stats(thd, create_user, time(NULL));
+
+    if (MYSQL_CALLBACK_ELSE(thd->scheduler, end_thread, (thd, 1), 0))
+      return;                                 // Probably no-threads
+
+pend_thread:
+    /*
+      If end_thread() returns, this thread has been schedule to
+      handle the next connection.
+    */
+    thd= current_thd;
+    thd->thread_stack= (char*) &thd;
+  }
+}
+
 void do_handle_one_connection(THD *thd_arg)
 {
   THD *thd= thd_arg;
+
+  if (thd->is_pended)
+  {
+    thd->thread_stack= (char*) &thd;
+    thd->is_pended = false;
+    thd_loop(thd, true);
+    return;
+  }
 
   thd->thr_create_utime= microsecond_interval_timer();
   /* We need to set this because of time_out_user_resource_limits */
@@ -1333,68 +1421,31 @@ void do_handle_one_connection(THD *thd_arg)
   if (setup_connection_thread_globals(thd))
     return;
 
-  for (;;)
-  {
-    bool create_user= TRUE;
-
-    mysql_socket_set_thread_owner(thd->net.vio->mysql_socket);
-    if (thd_prepare_connection(thd))
-    {
-      create_user= FALSE;
-      goto end_thread;
-    }      
-
-    thd->commander = new Commander(thd);
-
-    while (thd_is_connection_alive(thd))
-    {
-      mysql_audit_release(thd);
-      
-      thd->commander->do_command_phase_1();
-      if (thd->commander->return_value)
-      {
-        thd->commander->do_command_cleanup();
-        break;
-      }
-
-      if (thd->pending) break;
-
-      thd->commander->dispatch_command_phase_2();
-      thd->commander->do_command_phase_2();
-      thd->commander->do_command_cleanup();
-      if (thd->commander->return_value) 
-      {
-          break;
-      }
-    }
-    
-    delete thd->commander;
-
-    end_connection(thd);
-
-#ifdef WITH_WSREP
-  if (WSREP(thd))
-  {
-    mysql_mutex_lock(&thd->LOCK_wsrep_thd);
-    thd->wsrep_query_state= QUERY_EXITING;
-    mysql_mutex_unlock(&thd->LOCK_wsrep_thd);
-  }
-#endif
-end_thread:
-    close_connection(thd);
-
-    if (thd->userstat_running)
-      update_global_user_stats(thd, create_user, time(NULL));
-
-    if (MYSQL_CALLBACK_ELSE(thd->scheduler, end_thread, (thd, 1), 0))
-      return;                                 // Probably no-threads
-
-    /*
-      If end_thread() returns, this thread has been schedule to
-      handle the next connection.
-    */
-    thd= current_thd;
-    thd->thread_stack= (char*) &thd;
-  }
+  thd_loop(thd, false);
 }
+
+void* lazy_add(void *arg)
+{
+  printf("LAZY ADD!\n");
+  THD *thd = (THD *)arg;
+  my_sleep(1 * 1000 * 1000);
+  tp_rerun_pended_thd(thd);
+  return (void*)0;
+}
+
+static PSI_thread_key key_lazy;
+
+void finalize_phase(void *arg)
+{
+  ulong thread_id;
+  THD *thd = (THD *)arg;
+  tp_rerun_pended_thd(thd);
+/*  mysql_thread_create(key_lazy, &thread_id, 
+         0, &lazy_add, arg);
+         */
+}
+
+
+
+
 #endif /* EMBEDDED_LIBRARY */

@@ -904,7 +904,10 @@ THD::THD(bool is_wsrep_applier)
    wsrep_apply_format(0),
    wsrep_ignore_table(false)
 #endif
-   , pending(false)
+   , is_pended(false)
+   , pend_ready_to_rerun(false)
+   , pending_callback(NULL)
+   , pending_callback_arg(NULL)
 {
   ulong tmp;
 
@@ -1465,7 +1468,10 @@ void THD::init(void)
   debug_sync_init_thread(this);
 #endif /* defined(ENABLED_DEBUG_SYNC) */
   apc_target.init(&LOCK_thd_data);
-  pending = false;
+  is_pended= false;
+  pend_ready_to_rerun= false;
+  pending_callback= NULL;
+  pending_callback_arg= NULL;
   DBUG_VOID_RETURN;
 }
 
@@ -3582,7 +3588,6 @@ Query_arena::Type Query_arena::type() const
   DBUG_ASSERT(0); /* Should never be called */
   return STATEMENT;
 }
-
 
 void Query_arena::free_items()
 {

@@ -42,6 +42,8 @@ Created 12/9/1995 Heikki Tuuri
 #endif /* !UNIV_HOTBACKUP */
 #include "log0crypt.h"
 
+#include <vector>
+
 /* Type used for all log sequence number storage and arithmetics */
 typedef	ib_uint64_t		lsn_t;
 #define LSN_MAX			IB_UINT64_MAX
@@ -52,6 +54,12 @@ typedef	ib_uint64_t		lsn_t;
 struct log_t;
 /** Redo log group */
 struct log_group_t;
+
+struct lsn_callback_t {
+    void (*func)(void * arg);
+    void * arg;
+};
+
 
 #ifdef UNIV_DEBUG
 /** Flag: write to log file? */
@@ -234,16 +242,19 @@ that the log has been written to the log file up to the last log entry written
 by the transaction. If there is a flush running, it waits and checks if the
 flush flushed enough. If not, starts a new flush. */
 UNIV_INTERN
-void
+int
 log_write_up_to(
 /*============*/
 	lsn_t	lsn,	/*!< in: log sequence number up to which
 			the log should be written, LSN_MAX if not specified */
 	ulint	wait,	/*!< in: LOG_NO_WAIT, LOG_WAIT_ONE_GROUP,
 			or LOG_WAIT_ALL_GROUPS */
-	ibool	flush_to_disk);
+	ibool	flush_to_disk,
 			/*!< in: TRUE if we want the written log
 			also to be flushed to disk */
+    void (*callback)(void *) = NULL,
+            /*!< in: callback>*/
+    void * callback_arg = NULL);
 /****************************************************************//**
 Does a syncronous flush of the log buffer to disk. */
 UNIV_INTERN
@@ -1045,6 +1056,9 @@ struct log_t{
 					64-bit atomic ops are supported,
 					protected by the log sys mutex
 					otherwise. */
+
+    std::vector<lsn_callback_t> lsn_callbacks;
+	ib_prio_mutex_t	lsn_callbacks_mutex;		/*!< mutex protecting the log */
 };
 
 /** Test if flush order mutex is owned. */

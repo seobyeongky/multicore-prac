@@ -2027,8 +2027,11 @@ public:
   */
   const char *proc_info;
 
-  bool pending;
+  bool is_pended;
+  bool pend_ready_to_rerun;
   Commander * commander;
+  void (*pending_callback)(void *arg);
+  void *pending_callback_arg;
 
 private:
   unsigned int m_current_stage_key;
