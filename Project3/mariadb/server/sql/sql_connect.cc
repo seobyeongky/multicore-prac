@@ -1439,6 +1439,16 @@ void finalize_phase(void *arg)
 {
   ulong thread_id;
   THD *thd = (THD *)arg;
+
+  if (0 == __sync_val_compare_and_swap(&thd->pend_ready_state, 0, 3))
+  {
+    // That means succeess to set the state value
+    // and the handle_loop will not pend the thd!!
+    // So, Don't need to rerun
+    // => good performance
+    return;
+  }
+
   tp_rerun_pended_thd(thd);
 /*  mysql_thread_create(key_lazy, &thread_id, 
          0, &lazy_add, arg);
