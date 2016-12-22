@@ -1792,15 +1792,19 @@ loop:
 	write_lsn = log_sys->write_lsn;
 	flush_lsn = log_sys->flushed_to_disk_lsn;
 
-    for (std::vector<lsn_callback_t>::iterator it = log_sys->lsn_callbacks.begin();
-            it != log_sys->lsn_callbacks.end();
-            it++)
     {
-        it->func(it->arg);
-    }
-    log_sys->lsn_callbacks.clear();
+        std::vector<lsn_callback_t> callbacks_clone(log_sys->lsn_callbacks);
+        log_sys->lsn_callbacks.clear();
 
-	mutex_exit(&(log_sys->mutex));
+        mutex_exit(&(log_sys->mutex));
+
+        for (std::vector<lsn_callback_t>::iterator it = callbacks_clone.begin();
+                it != callbacks_clone.end();
+                it++)
+        {
+            it->func(it->arg);
+        }
+    }
 
 	innobase_mysql_log_notify(write_lsn, flush_lsn);
 

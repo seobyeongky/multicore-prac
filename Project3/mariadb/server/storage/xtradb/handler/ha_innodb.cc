@@ -4913,7 +4913,7 @@ innobase_commit(
 		if (1 == trx_commit_complete_for_mysql(trx, thd->pending_callback, thd->pending_callback_arg))
         {
             thd->is_pended = true;
-            thd->pend_ready_to_rerun = false;
+            thd->pend_ready_state = 0;
         }
 
         trx_deregister_from_2pc(trx);

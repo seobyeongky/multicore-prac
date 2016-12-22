@@ -905,7 +905,7 @@ THD::THD(bool is_wsrep_applier)
    wsrep_ignore_table(false)
 #endif
    , is_pended(false)
-   , pend_ready_to_rerun(false)
+   , pend_ready_state(0)
    , pending_callback(NULL)
    , pending_callback_arg(NULL)
 {
@@ -1469,7 +1469,7 @@ void THD::init(void)
 #endif /* defined(ENABLED_DEBUG_SYNC) */
   apc_target.init(&LOCK_thd_data);
   is_pended= false;
-  pend_ready_to_rerun= false;
+  pend_ready_state= 0;
   pending_callback= NULL;
   pending_callback_arg= NULL;
   DBUG_VOID_RETURN;

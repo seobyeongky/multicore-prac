@@ -2028,7 +2028,7 @@ public:
   const char *proc_info;
 
   bool is_pended;
-  bool pend_ready_to_rerun;
+  volatile int pend_ready_state; // 0:NOT READY, 1:READY, 2:KILLED
   Commander * commander;
   void (*pending_callback)(void *arg);
   void *pending_callback_arg;

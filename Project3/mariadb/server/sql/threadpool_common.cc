@@ -231,12 +231,12 @@ int threadpool_process_request(THD *thd)
   */
   if (!thd->is_pended)
   {
-    //printf("[%d] new commander\n", thd->thread_id);
+    printf("[%d] new commander\n", thd->thread_id);
     thd->commander = new Commander(thd);
   }
   else
   {
-    //printf("[%d] it is pended thd\n", thd->thread_id);
+    printf("[%d] it is pended thd\n", thd->thread_id);
     thd->is_pended = false;
     goto from_pend;
   }
@@ -250,17 +250,18 @@ int threadpool_process_request(THD *thd)
     thd->commander->do_command_phase_1();
     if (thd->commander->return_value) 
     {  
-      //printf("[%d] do_command_phase_1 failed\n", thd->thread_id);
+      printf("[%d] do_command_phase_1 failed!!!\n", thd->thread_id);
       thd->commander->do_command_cleanup();
       retval= 1;
+      thd->pend_ready_state = 2;
       goto end_with_cleanup;
     }
 
     if (thd->is_pended)
     {
-      //printf("[%d] is just pended\n", thd->thread_id);
+      printf("[%d] is just pended!!!\n", thd->thread_id);
       retval= 1653;
-      thd->pend_ready_to_rerun = true;
+      thd->pend_ready_state= 1;
       goto end;
     }
     
@@ -295,6 +296,7 @@ from_pend:
 end_with_cleanup:
   delete thd->commander;
 end:
+  printf("[%d] end of thread\n", thd->thread_id);
   worker_context.restore();
   return retval;
 }

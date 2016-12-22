@@ -1272,19 +1272,27 @@ void tp_rerun_pended_thd(THD *thd)
     thread_group_t *group= connection->thread_group;
     // simple busy waiting... wait for ready
     int count = 0;
-    while (!thd->pend_ready_to_rerun)
+    while (thd->pend_ready_state == 0)
     {
       __sync_synchronize();
       count++;
-      if (count % 1000 == 0) {
-          my_sleep(1000);
+      if (count % 1000 == 0)
+      {
+          printf("(%d)", thd->thread_id);
+          my_sleep(1000 * 1000);
       }
     }
-    /*if (count > 5) {
+    if (count > 5) {
         printf("waited %d\n", count);
-    }*/
+    }
+    if (thd->pend_ready_state == 2)
+    {
+      goto rerun_exit;
+    }
+
     queue_put(group, connection);
   }
+rerun_exit:
   DBUG_VOID_RETURN;
 }
 
