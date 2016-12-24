@@ -863,6 +863,7 @@ struct log_t{
 					mtr_commit and still ensure that
 					insertions in the flush_list happen
 					in the LSN order. */
+
 #endif /* !UNIV_HOTBACKUP */
 	byte*		buf_ptr;	/* unaligned log buffer */
 	byte*		buf;		/*!< log buffer */
@@ -1058,7 +1059,7 @@ struct log_t{
 					otherwise. */
 
     std::vector<lsn_callback_t> lsn_callbacks;
-	ib_prio_mutex_t	lsn_callbacks_mutex;		/*!< mutex protecting the log */
+	ib_mutex_t	lsn_callbacks_mutex;		/*!< mutex protecting the log */
 };
 
 /** Test if flush order mutex is owned. */

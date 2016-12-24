@@ -89,6 +89,7 @@ extern mysql_pfs_key_t	ibuf_pessimistic_insert_mutex_key;
 extern mysql_pfs_key_t	log_bmp_sys_mutex_key;
 extern mysql_pfs_key_t	log_sys_mutex_key;
 extern mysql_pfs_key_t	log_flush_order_mutex_key;
+extern mysql_pfs_key_t  log_lsn_callbacks_mutex_key;
 # ifndef HAVE_ATOMIC_BUILTINS
 extern mysql_pfs_key_t	server_mutex_key;
 # endif /* !HAVE_ATOMIC_BUILTINS */
@@ -884,6 +885,7 @@ or row lock! */
 #define SYNC_LOG_ONLINE		175
 #define SYNC_LOG		170
 #define SYNC_LOG_FLUSH_ORDER	147
+#define SYNC_LOG_LSN_CALLBACKS 169
 #define SYNC_RECV		168
 #define SYNC_FTS_TOKENIZE	167
 #define SYNC_FTS_CACHE_INIT	166	/* Used for FTS cache initialization */

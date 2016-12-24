@@ -109,6 +109,7 @@ UNIV_INTERN mysql_pfs_key_t	archive_lock_key;
 #ifdef UNIV_PFS_MUTEX
 UNIV_INTERN mysql_pfs_key_t	log_sys_mutex_key;
 UNIV_INTERN mysql_pfs_key_t	log_flush_order_mutex_key;
+UNIV_INTERN mysql_pfs_key_t log_lsn_callbacks_mutex_key;
 #endif /* UNIV_PFS_MUTEX */
 
 #ifdef UNIV_DEBUG
@@ -958,6 +959,10 @@ log_init(void)
 		     &log_sys->log_flush_order_mutex,
 		     SYNC_LOG_FLUSH_ORDER);
 
+    mutex_create(log_lsn_callbacks_mutex_key,
+            &log_sys->lsn_callbacks_mutex,
+            SYNC_LOG_LSN_CALLBACKS);
+
 	mutex_enter(&(log_sys->mutex));
 
 	/* Start the lsn from one log block from zero: this way every
@@ -1604,6 +1609,29 @@ loop:
 	}
 # endif
 #endif
+    if (flush_to_disk
+	    && log_sys->flushed_to_disk_lsn >= lsn) {
+		return 0;
+	}
+
+    if (log_sys->n_pending_writes > 0
+            && flush_to_disk
+		    && log_sys->current_flush_lsn >= lsn
+            && callback != NULL) {
+
+        mutex_enter(&(log_sys->lsn_callbacks_mutex));
+        if (log_sys->flushed_to_disk_lsn >= lsn)
+        {
+            mutex_exit(&(log_sys->lsn_callbacks_mutex));
+            return 0;
+        }
+        lsn_callback_t lsn_callback;
+        lsn_callback.func = callback;
+        lsn_callback.arg = callback_arg;
+        log_sys->lsn_callbacks.push_back(lsn_callback);
+        mutex_exit(&(log_sys->lsn_callbacks_mutex));
+        return 1;
+    }
 
 	mutex_enter(&(log_sys->mutex));
 	ut_ad(!recv_no_log_write);
@@ -1642,13 +1670,19 @@ loop:
             //printf("[%d] Wait for it to complete (flush to disk)\n", pthread_self());
             if (callback != NULL)
             {
+                mutex_exit(&(log_sys->mutex));
+
+                mutex_enter(&(log_sys->lsn_callbacks_mutex));
+                if (log_sys->flushed_to_disk_lsn >= lsn)
+                {
+                    mutex_exit(&(log_sys->lsn_callbacks_mutex));
+                    return 0;
+                }
                 lsn_callback_t lsn_callback;
                 lsn_callback.func = callback;
                 lsn_callback.arg = callback_arg;
                 log_sys->lsn_callbacks.push_back(lsn_callback);
-                mutex_exit(&(log_sys->mutex));
-                //mutex_enter(&(log_sys->lsn_callbacks_mutex));
-                //mutex_exit(&(log_sys->lsn_callbacks_mutex));
+                mutex_exit(&(log_sys->lsn_callbacks_mutex));
                 return 1;
             }
             else
@@ -1792,11 +1826,13 @@ loop:
 	write_lsn = log_sys->write_lsn;
 	flush_lsn = log_sys->flushed_to_disk_lsn;
 
+    mutex_exit(&(log_sys->mutex));
+
     {
+        mutex_enter(&(log_sys->lsn_callbacks_mutex));
         std::vector<lsn_callback_t> callbacks_clone(log_sys->lsn_callbacks);
         log_sys->lsn_callbacks.clear();
-
-        mutex_exit(&(log_sys->mutex));
+        mutex_exit(&(log_sys->lsn_callbacks_mutex));
 
         for (std::vector<lsn_callback_t>::iterator it = callbacks_clone.begin();
                 it != callbacks_clone.end();

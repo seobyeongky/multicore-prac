@@ -443,6 +443,7 @@ static PSI_mutex_info all_innodb_mutexes[] = {
 	{&fts_doc_id_mutex_key, "fts_doc_id_mutex", 0},
 	{&fts_pll_tokenize_mutex_key, "fts_pll_tokenize_mutex", 0},
 	{&log_flush_order_mutex_key, "log_flush_order_mutex", 0},
+    {&log_lsn_callbacks_mutex_key, "log_lsn_callbacks_mutex", 0},
 	{&hash_table_mutex_key, "hash_table_mutex", 0},
 	{&ibuf_bitmap_mutex_key, "ibuf_bitmap_mutex", 0},
 	{&ibuf_mutex_key, "ibuf_mutex", 0},
