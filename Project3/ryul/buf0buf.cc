@@ -1506,9 +1506,9 @@ Initialize a buffer pool instance.
 @return DB_SUCCESS if all goes well. */
 void *buf_pool_init_instance(void *arg)
 /*===================*/
-	/*!< in: buffer pool instance */
-	/*!< in: size in bytes */
-	/*!< in: id of the instance */
+	/*!< arg in1: buffer pool instance */
+	/*!< arg in2: size in bytes */
+	/*!< arg in3: id of the instance */
 {
 	ulint		i;
 	buf_chunk_t*	chunk;
@@ -1732,7 +1732,9 @@ buf_pool_init(
 	buf_pool_ptr = (buf_pool_t*) mem_zalloc(
 		n_instances * sizeof *buf_pool_ptr);
 
-    pthread_t threads[8];
+    pthread_t* threads;
+
+    threads = (pthread_t*) mem_zalloc( n_instances * sizeof(pthread_t));        
 	for (i = 0; i < n_instances; i++) {
 		buf_pool_t*	ptr	= &buf_pool_ptr[i];
 
