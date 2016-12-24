@@ -58,6 +58,9 @@ struct log_group_t;
 struct lsn_callback_t {
     void (*func)(void * arg);
     void * arg;
+
+    lsn_callback_t(void (*func)(void*), void *arg);
+    lsn_callback_t(void);
 };
 
 

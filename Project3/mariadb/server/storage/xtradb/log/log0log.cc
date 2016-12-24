@@ -62,6 +62,8 @@ Created 12/9/1995 Heikki Tuuri
 #include "trx0roll.h"
 #include "srv0mon.h"
 
+const int MAX_CALLBACKS = 32;
+
 /*
 General philosophy of InnoDB redo-logs:
 
@@ -167,6 +169,20 @@ the previous */
 /* States of an archiving operation */
 #define	LOG_ARCHIVE_READ	1
 #define	LOG_ARCHIVE_WRITE	2
+
+
+lsn_callback_t::lsn_callback_t(void (*func)(void*), void *arg)
+    : func(func)
+    , arg(arg)
+{
+}
+
+lsn_callback_t::lsn_callback_t(void)
+    : func()
+    , arg()
+{
+}
+
 
 /******************************************************//**
 Completes a checkpoint write i/o to a log file. */
@@ -1625,10 +1641,7 @@ loop:
             mutex_exit(&(log_sys->lsn_callbacks_mutex));
             return 0;
         }
-        lsn_callback_t lsn_callback;
-        lsn_callback.func = callback;
-        lsn_callback.arg = callback_arg;
-        log_sys->lsn_callbacks.push_back(lsn_callback);
+        log_sys->lsn_callbacks.push_back(lsn_callback_t(callback, callback_arg));
         mutex_exit(&(log_sys->lsn_callbacks_mutex));
         return 1;
     }
@@ -1678,10 +1691,7 @@ loop:
                     mutex_exit(&(log_sys->lsn_callbacks_mutex));
                     return 0;
                 }
-                lsn_callback_t lsn_callback;
-                lsn_callback.func = callback;
-                lsn_callback.arg = callback_arg;
-                log_sys->lsn_callbacks.push_back(lsn_callback);
+                log_sys->lsn_callbacks.push_back(lsn_callback_t(callback, callback_arg));
                 mutex_exit(&(log_sys->lsn_callbacks_mutex));
                 return 1;
             }
@@ -1830,15 +1840,20 @@ loop:
 
     {
         mutex_enter(&(log_sys->lsn_callbacks_mutex));
-        std::vector<lsn_callback_t> callbacks_clone(log_sys->lsn_callbacks);
-        log_sys->lsn_callbacks.clear();
+        lsn_callback_t callbacks_buf[MAX_CALLBACKS];
+        int callbacks_size = log_sys->lsn_callbacks.size();
+        int i;
+        for (i = 0; i < callbacks_size && i < MAX_CALLBACKS; i++)
+        {
+            callbacks_buf[i] = log_sys->lsn_callbacks[callbacks_size - i - 1];
+        }
+        log_sys->lsn_callbacks.resize(callbacks_size - i); // removing...
         mutex_exit(&(log_sys->lsn_callbacks_mutex));
 
-        for (std::vector<lsn_callback_t>::iterator it = callbacks_clone.begin();
-                it != callbacks_clone.end();
-                it++)
+        for (i = 0; i < callbacks_size && i < MAX_CALLBACKS; i++)
         {
-            it->func(it->arg);
+            lsn_callback_t & cb = callbacks_buf[i];
+            cb.func(cb.arg);
         }
     }
 
