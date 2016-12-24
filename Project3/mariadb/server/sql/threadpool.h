@@ -15,6 +15,8 @@
 
 #define MAX_THREAD_GROUPS 100000
 
+#define RETURN_PENDED 1653
+
 /* Threadpool parameters */
 extern uint threadpool_min_threads;  /* Minimum threads in pool */
 extern uint threadpool_idle_timeout; /* Shutdown idle worker threads  after this timeout */

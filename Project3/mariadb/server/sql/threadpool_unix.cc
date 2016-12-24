@@ -1470,7 +1470,6 @@ static int start_io(connection_t *connection)
 
 static void handle_event(connection_t *connection)
 {
-
   DBUG_ENTER("handle_event");
   int ret;
 
@@ -1491,7 +1490,7 @@ static void handle_event(connection_t *connection)
   ret= start_io(connection);
 
 end:
-  if (ret != 0 && ret != 1653)
+  if (ret != 0 && ret != RETURN_PENDED)
     connection_abort(connection);
 
   DBUG_VOID_RETURN;

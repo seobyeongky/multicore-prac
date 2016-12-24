@@ -256,7 +256,7 @@ int threadpool_process_request(THD *thd)
     {
       if (0 == __sync_val_compare_and_swap(&thd->pend_ready_state, 0, 1))
       {
-        retval= 1653;
+        retval= RETURN_PENDED;
         goto end;
       }
       else

@@ -1422,17 +1422,6 @@ void do_handle_one_connection(THD *thd_arg)
   thd_loop(thd, false);
 }
 
-void* lazy_add(void *arg)
-{
-  printf("LAZY ADD!\n");
-  THD *thd = (THD *)arg;
-  my_sleep(1 * 1000 * 1000);
-  tp_rerun_pended_thd(thd);
-  return (void*)0;
-}
-
-static PSI_thread_key key_lazy;
-
 void finalize_phase(void *arg)
 {
   ulong thread_id;
@@ -1448,9 +1437,6 @@ void finalize_phase(void *arg)
   }
 
   tp_rerun_pended_thd(thd);
-/*  mysql_thread_create(key_lazy, &thread_id, 
-         0, &lazy_add, arg);
-         */
 }
 
 
