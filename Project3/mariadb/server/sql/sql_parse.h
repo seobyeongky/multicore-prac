@@ -185,8 +185,8 @@ class Commander
 public:
     Commander(THD *thd);
 
-    void do_command_phase_1();
-    void do_command_phase_2();
+    bool do_command_phase_1();
+    bool do_command_phase_2();
     void do_command_cleanup();
 
     bool dispatch_command_phase_1(enum enum_server_command command,

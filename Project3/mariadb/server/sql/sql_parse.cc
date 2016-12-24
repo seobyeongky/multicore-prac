@@ -921,9 +921,9 @@ Commander::Commander(THD *thd)
     1  request of thread shutdown (see dispatch_command() description)
 */
 
-void Commander::do_command_phase_1()
+bool Commander::do_command_phase_1()
 {
-  return_value = 0;
+  bool return_value = 0;
   char *packet= 0;
 #ifdef WITH_WSREP
   ulong packet_length= 0; // just to avoid (false positive) compiler warning
@@ -1116,12 +1116,17 @@ void Commander::do_command_phase_1()
   return_value= dispatch_command_phase_1(command, packet+1, (uint) (packet_length-1), false);
 
 out:
-  DBUG_VOID_RETURN;
+  DBUG_RETURN(return_value);
 }
 
 
-void Commander::do_command_phase_2() {
+bool Commander::do_command_phase_2() {
   DBUG_ENTER("do_command_phase_2");
+
+  dispatch_command_phase_2();
+
+  bool return_value= FALSE;
+
 #ifdef WITH_WSREP
   if (WSREP(thd))
   {
@@ -1154,7 +1159,7 @@ void Commander::do_command_phase_2() {
   }
 #endif /* WITH_WSREP */
   DBUG_ASSERT(!thd->apc_target.is_enabled());
-  DBUG_VOID_RETURN;
+  DBUG_RETURN(return_value);
 }
 
 

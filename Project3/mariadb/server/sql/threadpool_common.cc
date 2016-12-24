@@ -229,17 +229,14 @@ int threadpool_process_request(THD *thd)
     (SSL can preread and cache incoming data, and vio->has_data() checks if it 
     was the case).
   */
-  if (!thd->is_pended)
+
+  if (thd->is_pended)
   {
-    //printf("[%d] new commander\n", thd->thread_id);
-    thd->commander = new Commander(thd);
-  }
-  else
-  {
-    //printf("[%d] it is pended thd\n", thd->thread_id);
     thd->is_pended = false;
     goto from_pend;
   }
+
+  thd->commander = new Commander(thd);
 
   for(;;)
   {
@@ -247,10 +244,8 @@ int threadpool_process_request(THD *thd)
     thd->net.reading_or_writing= 0;
     mysql_audit_release(thd);
  
-    thd->commander->do_command_phase_1();
-    if (thd->commander->return_value) 
+    if (thd->commander->do_command_phase_1())
     {  
-      //printf("[%d] do_command_phase_1 failed!!!\n", thd->thread_id);
       thd->commander->do_command_cleanup();
       retval= 1;
       thd->pend_ready_state = 2;
@@ -259,7 +254,6 @@ int threadpool_process_request(THD *thd)
 
     if (thd->is_pended)
     {
-      //printf("[%d] is just pended!!!\n", thd->thread_id);
       if (0 == __sync_val_compare_and_swap(&thd->pend_ready_state, 0, 1))
       {
         retval= 1653;
@@ -268,24 +262,22 @@ int threadpool_process_request(THD *thd)
       else
       {
         // That means => lsn is done!
+        // we can just continue
         thd->is_pended= false;
       }
     }
     
 from_pend:
-    thd->commander->dispatch_command_phase_2();
-    thd->commander->do_command_phase_2();
-    thd->commander->do_command_cleanup();
-    if (thd->commander->return_value) 
+    if (thd->commander->do_command_phase_2()) 
     {
-      //printf("[%d] do_command_phase_2 failed\n", thd->thread_id);
+      thd->commander->do_command_cleanup();
       retval= 1;
       goto end_with_cleanup;
     }
-    
+    thd->commander->do_command_cleanup();
+
     if (!thd_is_connection_alive(thd))
     {
-      //printf("[%d] lost connection\n", thd->thread_id);
       retval= 1;
       goto end_with_cleanup;
     }

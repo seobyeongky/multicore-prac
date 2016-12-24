@@ -1319,8 +1319,7 @@ void thd_loop(THD *thd, bool from_pending)
     {
       mysql_audit_release(thd);
       
-      thd->commander->do_command_phase_1();
-      if (thd->commander->return_value)
+      if (thd->commander->do_command_phase_1())
       {
         thd->commander->do_command_cleanup();
         break;
@@ -1331,13 +1330,12 @@ void thd_loop(THD *thd, bool from_pending)
       }
 
 from_pend:
-      thd->commander->dispatch_command_phase_2();
-      thd->commander->do_command_phase_2();
-      thd->commander->do_command_cleanup();
-      if (thd->commander->return_value) 
+      if (thd->commander->do_command_phase_2()) 
       {
+        thd->commander->do_command_cleanup();
         break;
       }
+      thd->commander->do_command_cleanup();
     }
     
     delete thd->commander;
